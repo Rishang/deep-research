@@ -1,4 +1,4 @@
-# 🧠 DeepResearch
+# 🧠 Deep Research
 
 <div align="center">
 
