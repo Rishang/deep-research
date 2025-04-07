@@ -54,7 +54,7 @@ graph TD
 
 ## 📋 Table of Contents
 
-- [🧠 DeepResearch](#-deepresearch)
+- [🧠 Deep Research](#-deep-research)
   - [🌟 Overview](#-overview)
   - [📋 Table of Contents](#-table-of-contents)
   - [🚀 Key Features](#-key-features)
@@ -413,7 +413,7 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 <div align="center">
   <p>If you find DeepResearch SDK useful, please consider giving it a star on GitHub!</p>
-  <a href="https://github.com/Rishang/deep-research-sdk">
-    <img src="https://img.shields.io/github/stars/Rishang/deep-research-sdk?style=social" alt="GitHub stars" />
+  <a href="https://github.com/Rishang/deep-research">
+    <img src="https://img.shields.io/github/stars/Rishang/deep-research?style=social" alt="GitHub stars" />
   </a>
 </div>
