@@ -34,6 +34,7 @@ class DeepResearch:
         research_model: str = "gpt-4o-mini",
         reasoning_model: str = "o3-mini",
         callback: Optional[ResearchCallback] = PrintCallback(),
+        base_url: str = "https://openai.com/api/v1",
         max_depth: int = 7,
         time_limit_minutes: float = 4.5,
         max_concurrent_requests: int = 5,
@@ -55,6 +56,7 @@ class DeepResearch:
         """
         self.docling_client = docling_client
         self.llm_api_key = llm_api_key
+        self.base_url = base_url
         self.research_model = research_model
         self.reasoning_model = reasoning_model
         self.callback = callback
@@ -178,6 +180,7 @@ class DeepResearch:
                 messages=[{"role": "user", "content": prompt}],
                 temperature=model_temp,
                 drop_params=True,  # Drop unsupported params for certain models
+                base_url=self.base_url,
             )
 
             result_text = response.choices[0].message.content
@@ -439,6 +442,7 @@ class DeepResearch:
                 max_tokens=max_tokens,  # Reduced to avoid context window limits
                 temperature=model_temp,
                 drop_params=True,  # Drop unsupported params for certain models
+                base_url=self.base_url,
             )
 
             final_text = final_analysis.choices[0].message.content
