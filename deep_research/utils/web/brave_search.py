@@ -6,10 +6,11 @@ from typing import Dict, Optional
 
 import aiohttp
 
-from ..models import SearchResult, WebSearchItem
+from ...models import SearchResult, WebSearchItem
+from .base_search import BaseSearchClient
 
 
-class BraveSearchClient:
+class BraveSearchClient(BaseSearchClient):
     """
     Client for interacting with the Brave Search API.
     """
@@ -53,6 +54,9 @@ class BraveSearchClient:
                 "count": max_results,
                 "country": self.country,
                 "search_lang": "en",
+                "extra_snippets": True,  # Include extra snippets for more context
+                "related": True,  # Include related queries
+                "rich_data": True,  # Include additional data like entity information
             }
 
             # Add any additional parameters
@@ -84,13 +88,44 @@ class BraveSearchClient:
                     if "web" in data and "results" in data["web"]:
                         for result in data["web"]["results"]:
                             try:
+                                # Get extra snippets if available
+                                extra_snippets = ""
+                                if "extra_snippets" in result:
+                                    extra_snippets = " ".join(result["extra_snippets"])
+
+                                # Combine regular description with extra snippets
+                                full_description = result.get("description", "")
+                                if extra_snippets:
+                                    full_description = (
+                                        f"{full_description} {extra_snippets}"
+                                    )
+
                                 search_item = WebSearchItem(
                                     url=result.get("url", ""),
                                     title=result.get("title", ""),
-                                    description=result.get("description", ""),
+                                    description=full_description,
                                     relevance=result.get("relevance", 1.0),
                                     provider="brave",
                                     date=result.get("published_date", ""),
+                                )
+                                formatted_results.append(search_item)
+                            except Exception as e:
+                                # Skip invalid results
+                                print(f"Error processing search result: {str(e)}")
+                                continue
+
+                    # Add related searches if available
+                    if "related" in data and "results" in data["related"]:
+                        for related_result in data["related"]["results"]:
+                            try:
+                                # Create a search result for each related query with a slightly lower relevance
+                                search_item = WebSearchItem(
+                                    url=f"https://search.brave.com/search?q={related_result.get('query', '').replace(' ', '+')}",
+                                    title=f"Related search: {related_result.get('query', '')}",
+                                    description=f"A related search query for additional information on {query}",
+                                    relevance=0.7,  # Lower relevance for related searches
+                                    provider="brave_related",
+                                    date="",
                                 )
                                 formatted_results.append(search_item)
                             except Exception:

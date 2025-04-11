@@ -54,7 +54,7 @@ class WebSearchItem(BaseModel):
     title: str
     description: str = ""
     relevance: float = Field(default=1.0, ge=0.0, le=1.0)
-    provider: str = "unknown"
+    provider: str = "unknown"  # This should match a value from WebSearchProvider enum
     date: str = ""
 
 
@@ -90,6 +90,7 @@ class ResearchState(BaseModel):
 
     findings: List[Dict[str, str]] = Field(default_factory=list)
     summaries: List[str] = Field(default_factory=list)
+    sources: List[SourceItem] = Field(default_factory=list)
     next_search_topic: str = ""
     url_to_search: str = ""
     current_depth: int = 0

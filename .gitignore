@@ -177,3 +177,5 @@ temp/
 # Cache
 *.sqlite3
 *.db
+tmp-*
+CLAUDE.local.md

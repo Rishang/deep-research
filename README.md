@@ -24,13 +24,25 @@ Originally a TypeScript implementation, this Python SDK adds parallel web scrapi
 ```mermaid
 graph TD
     subgraph "DeepResearch SDK"
-        A[Deep Research] --> B[DoclingClient]
+        A[Deep Research] --> W[Web Clients]
         A --> C[LLM Integration]
         A --> D[Research Callbacks]
 
-        B --> E[Brave Search]
-        B --> F[DuckDuckGo Search]
-        B --> G[Document Extraction]
+        W --> B1[DoclingClient]
+        W --> B2[DoclingServerClient]
+        W --> B3[FirecrawlClient]
+
+        B1 --> E[Brave Search]
+        B1 --> F[DuckDuckGo Search]
+        B1 --> G[Document Extraction]
+
+        B2 --> E
+        B2 --> F
+        B2 --> G2[Server-based Extraction]
+
+        B3 --> E
+        B3 --> F
+        B3 --> G3[Firecrawl Extraction]
 
         C --> H[GPT Models]
         C --> I[Claude Models]
@@ -47,8 +59,9 @@ graph TD
     classDef quaternary fill:#EA4335,stroke:#333,stroke-width:2px,color:white
 
     class A primary
-    class B,C,D secondary
-    class E,F,G,H,I,J tertiary
+    class W,C,D secondary
+    class B1,B2,B3 secondary
+    class E,F,G,G2,G3,H,I,J tertiary
     class K,L,M quaternary
 ```
 
@@ -71,6 +84,7 @@ graph TD
       - [Advanced: Using Structured Models for Cache Keys](#advanced-using-structured-models-for-cache-keys)
     - [Custom Research Parameters](#custom-research-parameters)
     - [Using with Different LLM Providers](#using-with-different-llm-providers)
+    - [Accessing Research Sources](#accessing-research-sources)
     - [Scheduling Research Tasks](#scheduling-research-tasks)
   - [🔄 Custom Callbacks](#-custom-callbacks)
   - [🤝 Contributing](#-contributing)
@@ -82,6 +96,7 @@ graph TD
   - [Brave Search API](https://brave.com/search/api/) for high-quality results
   - [DuckDuckGo Search](https://duckduckgo.com/) as automatic API-key-free fallback
   - Fault-tolerant fallback system ensures searches always return results
+  - Comprehensive source tracking with detailed metadata
 
 - **⚡ Parallel Processing**
   - Extract content from multiple sources simultaneously
@@ -93,6 +108,7 @@ graph TD
   - Depth-first approach with backtracking
 
 - **🧩 Modular Architecture**
+  - Multiple web client options (Docling, Docling-Server, Firecrawl)
   - Easily extensible for custom search providers
   - Plug in different LLM backends through LiteLLM
   - Event-driven callback system for monitoring progress
@@ -137,7 +153,8 @@ import asyncio
 import os
 import logging
 from deep_research import DeepResearch
-from deep_research.utils.docling_client import DoclingClient
+from deep_research.utils import DoclingClient, DoclingServerClient, FirecrawlClient
+from deep_research.utils.cache import CacheConfig
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
@@ -145,6 +162,7 @@ async def main():
     # Get API keys from environment variables
     openai_api_key = os.environ.get("OPENAI_API_KEY")
     brave_api_key = os.environ.get("BRAVE_SEARCH_API_KEY")  # Optional
+    firecrawl_api_key = os.environ.get("FIRECRAWL_API_KEY") # Optional
 
     if not openai_api_key:
         print("Error: OPENAI_API_KEY environment variable not set")
@@ -153,25 +171,56 @@ async def main():
     # Initialize the DeepResearch instance
     # Optional: Configure caching for search and extraction results
     # If you don't want to use caching, you can simply set `cache_config=None`
-    from deep_research.utils.cache import CacheConfig
-    
     cache_config = CacheConfig(
         enabled=True,                  # Enable caching
         ttl_seconds=3600,              # Cache entries expire after 1 hour
         db_url="sqlite:///docling_cache.sqlite3"  # SQLite database for cache
     )
 
+    # OPTION 1: Use the standard Docling client
     researcher = DeepResearch(
-        docling_client=DoclingClient(
+        web_client=DoclingClient(
             cache_config=cache_config,
             brave_api_key=brave_api_key, # Optional: Brave Search API key if None it will use DuckDuckGo with no API key
         ),
         llm_api_key=openai_api_key,
-        research_model="gpt-4o-mini",      # Advanced research model
-        reasoning_model="o3-mini",         # More efficient model for reasoning
-        max_depth=3,                       # Maximum research depth
-        time_limit_minutes=2              # Time limit in minutes
+        research_model="gpt-4o-mini",    # Advanced research model
+        reasoning_model="o3-mini",       # More efficient model for reasoning
+        max_depth=3,                     # Maximum research depth
+        time_limit_minutes=2             # Time limit in minutes
     )
+
+    # OPTION 2: Use the Docling Server client
+    # async with DoclingServerClient(
+    #     server_url="http://localhost:8000",  # URL of your docling-serve instance
+    #     brave_api_key=brave_api_key,
+    #     cache_config=cache_config
+    # ) as docling_server:
+    #     researcher = DeepResearch(
+    #         web_client=docling_server,
+    #         llm_api_key=openai_api_key,
+    #         research_model="gpt-4o-mini",
+    #         reasoning_model="o3-mini",
+    #         max_depth=3,
+    #         time_limit_minutes=2
+    #     )
+    #     # ... rest of your code
+
+    # OPTION 3: Use the Firecrawl client
+    # if firecrawl_api_key:
+    #     async with FirecrawlClient(
+    #         api_key=firecrawl_api_key,
+    #         cache_config=cache_config
+    #     ) as firecrawl:
+    #         researcher = DeepResearch(
+    #             web_client=firecrawl,
+    #             llm_api_key=openai_api_key,
+    #             research_model="gpt-4o-mini",
+    #             reasoning_model="o3-mini",
+    #             max_depth=3,
+    #             time_limit_minutes=2
+    #         )
+    #         # ... rest of your code
 
     # Perform research
     result = await researcher.research("The impact of quantum computing on cryptography")
@@ -180,6 +229,12 @@ async def main():
     if result.success:
         print("\n==== RESEARCH SUCCESSFUL ====")
         print(f"Found {len(result.data['findings'])} pieces of information")
+        print(f"Used {len(result.data['sources'])} sources")
+        
+        # Access the sources used in research
+        for i, source in enumerate(result.data['sources']):
+            print(f"Source {i+1}: {source['title']} - {source['url']}")
+            
         print(f"Analysis:\n{result.data['analysis']}")
     else:
         print(f"Research failed: {result.error}")
@@ -249,12 +304,47 @@ flowchart LR
 
 ## 📊 Usage Examples
 
+### Web Client Options
+
+DeepResearch supports multiple web client implementations:
+
+```python
+from deep_research.utils import DoclingClient, DoclingServerClient, FirecrawlClient
+from deep_research.utils.cache import CacheConfig
+
+# 1. Standard Docling Client (local HTML parsing)
+docling_client = DoclingClient(
+    brave_api_key="your-brave-key",  # Optional
+    max_concurrent_requests=8,
+    cache_config=CacheConfig(enabled=True)
+)
+
+# 2. Docling Server Client (connects to remote docling-serve instance)
+docling_server_client = DoclingServerClient(
+    server_url="http://localhost:8000",  # URL of your docling-serve instance
+    brave_api_key="your-brave-key",      # Optional
+    max_concurrent_requests=8,
+    cache_config=CacheConfig(enabled=True)
+)
+
+# 3. Firecrawl Client (connects to Firecrawl API)
+firecrawl_client = FirecrawlClient(
+    api_key="your-firecrawl-api-key",    # Required
+    api_url="https://api.firecrawl.dev", # Default Firecrawl API URL
+    max_concurrent_requests=8,
+    cache_config=CacheConfig(enabled=True)
+)
+
+# All clients implement the BaseWebClient interface
+# and can be used interchangeably with DeepResearch
+```
+
 ### Search Results with Metadata
 
 The DeepResearch SDK returns search results with rich metadata, including:
 
 ```python
-from deep_research.utils.docling_client import DoclingClient
+from deep_research.utils import DoclingClient
 
 client = DoclingClient()
 
@@ -275,7 +365,7 @@ for result in search_results.data:
 
 ```python
 from deep_research.utils.cache import CacheConfig
-from deep_research.utils.docling_client import DoclingClient
+from deep_research.utils import DoclingClient, DoclingServerClient, FirecrawlClient
 
 # Configure the cache with SQLite (default)
 cache_config = CacheConfig(
@@ -285,7 +375,7 @@ cache_config = CacheConfig(
     create_tables=True                      # Create tables if they don't exist
 )
 
-# Initialize client with caching
+# Initialize client with caching (works with any client type)
 client = DoclingClient(
     cache_config=cache_config
 )
@@ -348,6 +438,30 @@ researcher = DeepResearch(
     research_model="anthropic/claude-3-opus-20240229",
     reasoning_model="anthropic/claude-3-haiku-20240307",
 )
+```
+
+### Accessing Research Sources
+
+DeepResearch tracks all sources used in the research process and returns them in the result:
+
+```python
+# Run the research
+result = await researcher.research("Advances in quantum computing")
+
+# Access the sources used in research
+if result.success:
+    print(f"Research used {len(result.data['sources'])} sources:")
+    
+    for i, source in enumerate(result.data['sources']):
+        print(f"Source {i+1}: {source['title']}")
+        print(f"  URL: {source['url']}")
+        print(f"  Relevance: {source['relevance']}")
+        if source['description']:
+            print(f"  Description: {source['description']}")
+        print()
+        
+    # The sources data includes structured information about all references
+    # used during the research process, complete with metadata
 ```
 
 ### Scheduling Research Tasks

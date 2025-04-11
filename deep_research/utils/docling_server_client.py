@@ -1,11 +1,12 @@
 """
-Docling client for web scraping and information extraction.
+Docling Server client for web scraping and information extraction.
+Interacts with a running instance of docling-serve.
 """
 
 import asyncio
 from typing import Dict, List, Optional, Union
 
-from docling.document_converter import DocumentConverter
+import aiohttp
 from pydantic import HttpUrl
 
 from ..models import ExtractResult, SearchResult, WebSearchItem
@@ -15,23 +16,25 @@ from .docling_client_models import ScrapeParams, SearchParams
 from .web import BraveSearchClient, DuckDuckGoSearchClient
 
 
-class DoclingClient(BaseWebClient):
+class DoclingServerClient(BaseWebClient):
     """
-    A client for interacting with Docling for web scraping and search.
-    Implements the BaseWebClient interface using standard Docling library.
+    A client for interacting with a running Docling Server for web scraping and search.
+    Implements the BaseWebClient interface using the docling-serve API.
     """
 
     def __init__(
         self,
+        server_url: str = "http://localhost:8000",
         brave_api_key: Optional[str] = None,
         max_concurrent_requests: int = 5,
         cache_config: Optional[CacheConfig] = None,
         page_content_max_chars: int = 8000,
     ):
         """
-        Initialize the Docling client.
+        Initialize the Docling Server client.
 
         Args:
+            server_url (str): URL of the running Docling server. Defaults to "http://localhost:8000".
             brave_api_key (Optional[str], optional): Brave Search API key. Defaults to None.
             max_concurrent_requests (int, optional): Maximum number of concurrent requests.
                 Defaults to 5.
@@ -42,7 +45,8 @@ class DoclingClient(BaseWebClient):
         """
         super().__init__(max_concurrent_requests, cache_config, page_content_max_chars)
 
-        self.client = DocumentConverter()  # Docling uses DocumentConverter
+        self.server_url = server_url.rstrip("/")
+        self.client_session = aiohttp.ClientSession()
 
         # Setup search providers
         self.use_brave_search = brave_api_key is not None
@@ -52,6 +56,17 @@ class DoclingClient(BaseWebClient):
             BraveSearchClient(api_key=brave_api_key) if brave_api_key else None
         )
         self.duckduckgo_search = DuckDuckGoSearchClient() if not brave_api_key else None
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        await self.close()
+
+    async def close(self):
+        """Close the aiohttp session."""
+        if hasattr(self, "client_session") and self.client_session:
+            await self.client_session.close()
 
     @cache(structure=SearchParams)
     async def search(self, query: str, max_results: int = 10) -> SearchResult:
@@ -92,21 +107,6 @@ class DoclingClient(BaseWebClient):
             # Create a list of sample URLs related to the query as a last resort
             search_terms = query.replace(" ", "+")
 
-            # Break the query into parts for generating related searches
-            query_parts = query.split()
-            related_queries = []
-
-            # Generate related searches based on first words plus different endings
-            if len(query_parts) >= 2:
-                base_terms = " ".join(query_parts[:2])
-                related_queries = [
-                    f"{base_terms} overview",
-                    f"{base_terms} tutorial",
-                    f"{base_terms} examples",
-                    f"{base_terms} alternative",
-                    f"{base_terms} vs traditional",
-                ]
-
             # Create WebSearchItem objects
             search_results = [
                 WebSearchItem(
@@ -133,29 +133,7 @@ class DoclingClient(BaseWebClient):
                     provider="mock",
                     date="",
                 ),
-                WebSearchItem(
-                    url=f"https://www.semanticscholar.org/search?q={search_terms}",  # type: ignore
-                    title=f"Semantic Scholar - {query}",
-                    description=f"Academic papers and research about {query}",
-                    relevance=0.83,
-                    provider="mock",
-                    date="",
-                ),
             ]
-
-            # Add related searches with lower relevance
-            for i, related_query in enumerate(related_queries):
-                related_terms = related_query.replace(" ", "+")
-                search_results.append(
-                    WebSearchItem(
-                        url=f"https://www.google.com/search?q={related_terms}",  # type: ignore
-                        title=f"Related: {related_query}",
-                        description=f"Additional information related to {query}",
-                        relevance=0.7 - (i * 0.02),  # Decreasing relevance
-                        provider="mock_related",
-                        date="",
-                    )
-                )
 
             return SearchResult(success=True, data=search_results[:max_results])
         except Exception as e:
@@ -166,9 +144,9 @@ class DoclingClient(BaseWebClient):
     @cache(structure=ScrapeParams)
     async def _extract_single_url(self, url: str, prompt: str) -> Dict:
         """
-        Extract information from a single URL.
+        Extract information from a single URL using the Docling Server API.
 
-        This method is now cached using the ScrapeParams model structure.
+        This method is cached using the ScrapeParams model structure.
         The cache key is based on the URL.
 
         Args:
@@ -180,25 +158,30 @@ class DoclingClient(BaseWebClient):
         """
         async with self.semaphore:  # Limit concurrent requests
             try:
-                # Use Docling DocumentConverter to extract content
-                loop = asyncio.get_event_loop()
-                # Convert the synchronous DocumentConverter.convert call to async
-                result = await loop.run_in_executor(
-                    None, lambda: self.client.convert(url)
-                )
+                # Call the Docling Server API to extract content
+                async with self.client_session.post(
+                    f"{self.server_url}/api/extract",
+                    json={"url": url, "prompt": prompt},
+                    timeout=60,  # 60 second timeout for extraction
+                ) as response:
+                    if response.status != 200:
+                        return {
+                            "success": False,
+                            "url": url,
+                            "data": None,
+                            "error": f"Server returned status code {response.status}",
+                        }
 
-                # Extract content as markdown
-                content = result.document.export_to_markdown()
+                    result = await response.json()
+                    content = result.get("content", "")
 
-                # Add prompt-based extraction here (in a real implementation, you might use an LLM)
-                # For now, we'll just return the content with the prompt as context
-
-                return {
-                    "success": True,
-                    "url": url,
-                    "data": f"Extracted with prompt '{prompt}': {content[: self.page_content_max_chars]}...",  # Truncate for reasonable size
-                    "error": None,
-                }
+                    # Add prompt-based extraction
+                    return {
+                        "success": True,
+                        "url": url,
+                        "data": f"Extracted with prompt '{prompt}': {content[: self.page_content_max_chars]}...",
+                        "error": None,
+                    }
             except Exception as e:
                 return {"success": False, "url": url, "data": None, "error": str(e)}
 
@@ -208,9 +191,6 @@ class DoclingClient(BaseWebClient):
         """
         Extract information from the provided URLs based on the prompt.
         Uses concurrent requests for faster processing.
-
-        Note: This method handles multiple URLs, so caching happens at the
-        individual URL level within _extract_single_url.
 
         Args:
             urls (List[Union[str, HttpUrl]]): URLs to extract information from.
@@ -251,7 +231,7 @@ class DoclingClient(BaseWebClient):
         self, urls: List[Union[str, HttpUrl]]
     ) -> Dict[str, ExtractResult]:
         """
-        Scrape content from multiple URLs concurrently.
+        Scrape content from multiple URLs concurrently using the Docling Server.
 
         Args:
             urls (List[Union[str, HttpUrl]]): URLs to scrape.
@@ -264,17 +244,24 @@ class DoclingClient(BaseWebClient):
         async def _scrape_single(url: str):
             try:
                 async with self.semaphore:
-                    # Convert the synchronous DocumentConverter.convert call to async
-                    loop = asyncio.get_event_loop()
-                    result = await loop.run_in_executor(
-                        None, lambda: self.client.convert(url)
-                    )
+                    # Call the Docling Server API to scrape content
+                    async with self.client_session.post(
+                        f"{self.server_url}/api/scrape",
+                        json={"url": url},
+                        timeout=60,  # 60 second timeout for scraping
+                    ) as response:
+                        if response.status != 200:
+                            result = ExtractResult(
+                                success=False,
+                                error=f"Server returned status code {response.status}",
+                            )
+                            return url, result
 
-                    # Extract content as markdown
-                    content = result.document.export_to_markdown()
+                        response_data = await response.json()
+                        content = response_data.get("content", "")
 
-                    result = ExtractResult(success=True, data=content)
-                    return url, result
+                        result = ExtractResult(success=True, data=content)
+                        return url, result
             except Exception as e:
                 result = ExtractResult(success=False, error=f"Scrape failed: {str(e)}")
                 return url, result
@@ -294,7 +281,7 @@ class DoclingClient(BaseWebClient):
     @cache(structure=ScrapeParams)
     async def scrape_url(self, url: Union[str, HttpUrl]) -> ExtractResult:
         """
-        Scrape content from a specific URL.
+        Scrape content from a specific URL using the Docling Server.
 
         This method is cached if caching is enabled in the client.
         The cache key is based on the ScrapeParams model (url only).
@@ -307,15 +294,21 @@ class DoclingClient(BaseWebClient):
         """
         try:
             async with self.semaphore:
-                # Convert the synchronous DocumentConverter.convert call to async
-                loop = asyncio.get_event_loop()
-                result = await loop.run_in_executor(
-                    None, lambda: self.client.convert(str(url))
-                )
+                # Call the Docling Server API to scrape content
+                async with self.client_session.post(
+                    f"{self.server_url}/api/scrape",
+                    json={"url": str(url)},
+                    timeout=60,  # 60 second timeout for scraping
+                ) as response:
+                    if response.status != 200:
+                        return ExtractResult(
+                            success=False,
+                            error=f"Server returned status code {response.status}",
+                        )
 
-                # Extract content as markdown
-                content = result.document.export_to_markdown()
+                    response_data = await response.json()
+                    content = response_data.get("content", "")
 
-                return ExtractResult(success=True, data=content)
+                    return ExtractResult(success=True, data=content)
         except Exception as e:
             return ExtractResult(success=False, error=f"Scrape failed: {str(e)}")
