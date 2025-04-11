@@ -7,7 +7,7 @@ requires-python = ">=3.11,<4.0"
 dependencies = [
     "pydantic>=2.11.1",
     "aiohttp>=3.8.0",
-    "duckduckgo-search>=2025.4.1",
+    "duckduckgo-search>=8.0.0",
     "requests>=2.32.3",
     "sqlmodel>=0.0.16",
     "tokenizers>=0.21.1",

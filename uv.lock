@@ -232,7 +232,7 @@ wheels = [
 
 [[package]]
 name = "deep-research-sdk"
-version = "0.1.0"
+version = "0.1.2"
 source = { virtual = "." }
 dependencies = [
     { name = "aiohttp" },
@@ -257,7 +257,7 @@ dev = [
 requires-dist = [
     { name = "aiohttp", specifier = ">=3.8.0" },
     { name = "docling", specifier = ">=2.15.1" },
-    { name = "duckduckgo-search", specifier = ">=2025.4.1" },
+    { name = "duckduckgo-search", specifier = ">=7.5.5" },
     { name = "litellm", specifier = ">=1.65.1" },
     { name = "pydantic", specifier = ">=2.11.1" },
     { name = "requests", specifier = ">=2.32.3" },
@@ -439,26 +439,16 @@ wheels = [
 
 [[package]]
 name = "duckduckgo-search"
-version = "2025.4.1"
+version = "8.0.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "click" },
     { name = "lxml" },
     { name = "primp" },
 ]
+sdist = { url = "https://files.pythonhosted.org/packages/25/aa/594674d0cfe45bdeb825b6383de2104c7320f3fb582eb97fb153dbdc8c71/duckduckgo_search-8.0.0.tar.gz", hash = "sha256:2a8e22092156e11d3c9195e1ce100fa0bce181d23d6f84b89228190498887736", size = 22253 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/e9/66/aa566ed98e3db8dbb41481bbcffb6349b2f5e1fd5eda41d833a3dce35fff/duckduckgo_search-2025.4.1-cp311-cp311-macosx_10_9_x86_64.whl", hash = "sha256:4c875834a7867e2185fb4fde254382f96f3b732beb57fec47940fef48767eced", size = 65316 },
-    { url = "https://files.pythonhosted.org/packages/41/04/4d569fcf891abbf23f8279e0b53ddc515a73f9dba8328654a0aa68c86806/duckduckgo_search-2025.4.1-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:706c299bfe585929f91d76d18d108299de11681387c3e25d8d5c686a83a5ebd1", size = 62664 },
-    { url = "https://files.pythonhosted.org/packages/a8/a0/e241023418b92ec00b66dcffb97873fa388956b0ee51b24594191457f1f8/duckduckgo_search-2025.4.1-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:53b34ffc2b1321b32e90dd5d8305e7c0ea2486b4f2b4f29a1c5a91095d11adbe", size = 77557 },
-    { url = "https://files.pythonhosted.org/packages/1f/0c/8156d25202fd1b6ccb0dd632a4a5c07afcb3cde3031b55d92bc12eb9e6bd/duckduckgo_search-2025.4.1-cp311-cp311-win_amd64.whl", hash = "sha256:eaa4b3f1c7bf7a71eb4f681d7dc63e9fa94c60641d0a688fbae309224e4f688f", size = 45669 },
-    { url = "https://files.pythonhosted.org/packages/54/6a/e9373962efbae6fb31f3867b48e7b1873b7fbe1e02bec002e1fae21af15c/duckduckgo_search-2025.4.1-cp312-cp312-macosx_10_13_x86_64.whl", hash = "sha256:a9bb66ab84bdece8c5f4f4e0368916305fe04db4118bbe2ecc2ae91cc01ffc99", size = 66022 },
-    { url = "https://files.pythonhosted.org/packages/2a/43/40c56fb72b9ba2a55bc55b676c9afeb8567af7e4b692809b95253f578eae/duckduckgo_search-2025.4.1-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:6ddcbfbc947fec78c07bb727a8c400e63800c4fff08d62aaee02785bb5db01cf", size = 62731 },
-    { url = "https://files.pythonhosted.org/packages/57/86/ed29a4a6143fa9a158f6fbba9b771b08d8be11fcfd0a6255e9292f937e78/duckduckgo_search-2025.4.1-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:e37a17cc07b4ba0d40701b1432464b8b246d2b1cdb2827e8b85e5b7e9c64ecd8", size = 78183 },
-    { url = "https://files.pythonhosted.org/packages/ce/55/2ce83218e8ee9579b7278ebcac307b4b891a90e2e73cbc53e09a43007aa3/duckduckgo_search-2025.4.1-cp312-cp312-win_amd64.whl", hash = "sha256:2cc277230cc0c12543a5fc1b425eb327e0a8df81ea557e1649e509ae13f4ac9c", size = 45749 },
-    { url = "https://files.pythonhosted.org/packages/c1/9a/1f664ee6cba637db842e783f47cc662dad13d7a62aac13a4730e40965f77/duckduckgo_search-2025.4.1-cp313-cp313-macosx_10_13_x86_64.whl", hash = "sha256:52b62e2a8d1fea6971e8d48e6308f8e88904bb542454b43a74e683b078cabd9e", size = 65807 },
-    { url = "https://files.pythonhosted.org/packages/8a/98/4a822a43162f21e46b0df3e7c5d077e1c5aa6771de046cbd44bebba9172c/duckduckgo_search-2025.4.1-cp313-cp313-macosx_11_0_arm64.whl", hash = "sha256:65f2f87eed22d07ded999702fb6c1c811532543f98f4bf76f650b7978837eba2", size = 62641 },
-    { url = "https://files.pythonhosted.org/packages/1f/c7/c8cd175d8e8bdfd332ef101c77ee29b08fa3082e56a5a635e390a3c9826a/duckduckgo_search-2025.4.1-cp313-cp313-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:859c73423f2f1ef8f85037c587272f52569ac41a88b45e53d268fd520802a140", size = 78006 },
-    { url = "https://files.pythonhosted.org/packages/a7/0b/882b89120b0d02bb2d109c040030070c30cf27fd0c8f902ca6ff27624231/duckduckgo_search-2025.4.1-cp313-cp313-win_amd64.whl", hash = "sha256:0f3dd62cc9605c6583569204f3e822cde548cdf6c7070e46c0676e85b0f13874", size = 45739 },
+    { url = "https://files.pythonhosted.org/packages/db/39/8e01afdea1bf7e67eb191217ad958a5c691f7739c9dacd00e8d77a663e4d/duckduckgo_search-8.0.0-py3-none-any.whl", hash = "sha256:0026f2c6961d457b4c526cb840dbb28a7b24f67ce38589618a5021fdb3f0e8bc", size = 18687 },
 ]
 
 [[package]]
