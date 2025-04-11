@@ -41,7 +41,7 @@ class ActivityItem(BaseModel):
 class SourceItem(BaseModel):
     """A source of information used in the research."""
 
-    url: HttpUrl
+    url: HttpUrl | str
     title: str
     relevance: float = Field(ge=0.0, le=1.0)
     description: Optional[str] = None
@@ -50,7 +50,7 @@ class SourceItem(BaseModel):
 class WebSearchItem(BaseModel):
     """A standard format for search results from any provider."""
 
-    url: HttpUrl
+    url: HttpUrl | str
     title: str
     description: str = ""
     relevance: float = Field(default=1.0, ge=0.0, le=1.0)
