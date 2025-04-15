@@ -19,7 +19,7 @@ async def example_with_docling():
     brave_api_key = os.environ.get("BRAVE_SEARCH_API_KEY")
 
     # Define a research topic
-    topic = "The impact of quantum computing on cryptography and security"
+    topic = "create a terraform code to deploy a kubernetes cluster in aws"
 
     if not openai_api_key:
         print("Error: OPENAI_API_KEY environment variable not set")
@@ -60,6 +60,17 @@ async def example_with_docling():
         print(
             f"- Completed {result.data['completed_steps']} of {result.data['total_steps']} steps"
         )
+
+        print("\n==== SEARCH QUERIES USED ====")
+        if "search_queries" in result.data:
+            for i, query in enumerate(result.data["search_queries"]):
+                print(
+                    f"{i + 1}. Query: {query['query']} (Relevance: {query['relevance']:.2f})"
+                )
+                if "explanation" in query and query["explanation"]:
+                    print(f"   Explanation: {query['explanation']}")
+        else:
+            print("No search queries data available.")
 
         print("\n==== SOURCES USED ====")
         for i, source in enumerate(result.data["sources"]):
@@ -125,6 +136,17 @@ async def example_with_docling_server():
             print(
                 f"- Completed {result.data['completed_steps']} of {result.data['total_steps']} steps"
             )
+
+            print("\n==== SEARCH QUERIES USED ====")
+            if "search_queries" in result.data:
+                for i, query in enumerate(result.data["search_queries"]):
+                    print(
+                        f"{i + 1}. Query: {query['query']} (Relevance: {query['relevance']:.2f})"
+                    )
+                    if "explanation" in query and query["explanation"]:
+                        print(f"   Explanation: {query['explanation']}")
+            else:
+                print("No search queries data available.")
 
             print("\n==== SOURCES USED ====")
             for i, source in enumerate(result.data["sources"]):
@@ -198,6 +220,17 @@ async def example_with_firecrawl():
             print(
                 f"- Completed {result.data['completed_steps']} of {result.data['total_steps']} steps"
             )
+
+            print("\n==== SEARCH QUERIES USED ====")
+            if "search_queries" in result.data:
+                for i, query in enumerate(result.data["search_queries"]):
+                    print(
+                        f"{i + 1}. Query: {query['query']} (Relevance: {query['relevance']:.2f})"
+                    )
+                    if "explanation" in query and query["explanation"]:
+                        print(f"   Explanation: {query['explanation']}")
+            else:
+                print("No search queries data available.")
 
             print("\n==== SOURCES USED ====")
             for i, source in enumerate(result.data["sources"]):

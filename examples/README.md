@@ -12,6 +12,14 @@ This basic example in the main project directory demonstrates how to use DeepRes
 python example.py
 ```
 
+### [Query Generation Example](query_generation_example.py)
+
+Demonstrates how the reasoning model generates multiple search queries from a research topic, which are then used to gather diverse and comprehensive information.
+
+```bash
+python examples/query_generation_example.py
+```
+
 ### [Cache Example](cache_example.py)
 
 Demonstrates how to use the caching system to improve performance when making repeated searches or extractions.
