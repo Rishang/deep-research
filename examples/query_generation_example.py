@@ -1,5 +1,11 @@
 """
-Example showcasing the query generation feature in Deep Research SDK.
+Example showcasing the adaptive query generation in Deep Research SDK.
+
+Demonstrates:
+- Phase-aware query generation (Exploration, Deepening, Verification)
+- Multiple queries generated per phase
+- Query relevance scoring and explanations
+- How queries evolve based on findings
 """
 
 import asyncio
@@ -13,15 +19,13 @@ logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
 
 async def query_generation_example():
-    """Run example with query generation enabled."""
+    """Run example demonstrating adaptive query generation across phases."""
     # Get API keys from environment variables
     openai_api_key = os.environ.get("OPENAI_API_KEY")
     brave_api_key = os.environ.get("BRAVE_SEARCH_API_KEY")
 
-    # Define a research topic - choose a complex one that benefits from multiple queries
-    topic = (
-        "The impact of artificial intelligence on healthcare diagnostics and treatment"
-    )
+    # Define a research topic - choose a complex one that benefits from multiple phases
+    topic = "The role of vector databases in modern AI applications"
 
     if not openai_api_key:
         print("Error: OPENAI_API_KEY environment variable not set")
@@ -32,8 +36,10 @@ async def query_generation_example():
             "Warning: BRAVE_API_KEY environment variable not set. Falling back to DuckDuckGo search."
         )
 
-    print("\n\n==== QUERY GENERATION EXAMPLE ====")
-    print(f"Research Topic: {topic}")
+    print("\n" + "=" * 70)
+    print("🔍 ADAPTIVE QUERY GENERATION EXAMPLE")
+    print("=" * 70)
+    print(f"\n📚 Research Topic: {topic}\n")
 
     # Create a Deep Research instance with DoclingClient
     researcher = DeepResearch(
@@ -45,61 +51,95 @@ async def query_generation_example():
         ),
         llm_api_key=openai_api_key,
         research_model="gpt-4o-mini",
-        reasoning_model="o3-mini",  # Using O3 model for reasoning
-        max_depth=2,  # Limit depth for this example
-        time_limit_minutes=2.0,  # Allow enough time for multiple queries
+        reasoning_model="o3-mini",
+        max_depth=3,  # Allow all phases to execute
+        time_limit_minutes=2.5,  # Enough time for adaptive phases
+        enable_graphrag=True,
     )
 
-    # Run the full research with query generation
-    print(f"Starting research with generated search queries from topic: {topic}")
+    # Run the research with adaptive query generation
+    print("🚀 Starting adaptive multi-phase research...\n")
     result = await researcher.research(topic, max_tokens=8000)
 
     # Check the result
     if result.success:
-        print("\n==== RESEARCH SUCCESSFUL ====")
-        print(f"- Found {len(result.data['findings'])} pieces of information")
-        print(f"- Used {len(result.data['sources'])} sources")
-        print(
-            f"- Completed {result.data['completed_steps']} of {result.data['total_steps']} steps"
-        )
+        print("\n" + "=" * 70)
+        print("✅ RESEARCH SUCCESSFUL")
+        print("=" * 70)
 
-        print("\n==== SEARCH QUERIES GENERATED ====")
+        print("\n📊 Research Statistics:")
+        print(f"   • Findings: {len(result.data['findings'])}")
+        print(f"   • Sources: {len(result.data['sources'])}")
+        print(f"   • Research phases: {result.data.get('research_phases', 0)}")
+
+        # Demonstrate adaptive query generation
+        print("\n" + "=" * 70)
+        print("🎯 ADAPTIVE QUERY GENERATION - BY PHASE")
+        print("=" * 70)
+
         if "search_queries" in result.data:
-            for i, query in enumerate(result.data["search_queries"]):
-                print(
-                    f"{i + 1}. Query: {query['query']} (Relevance: {query['relevance']:.2f})"
-                )
-                if "explanation" in query and query["explanation"]:
-                    print(f"   Explanation: {query['explanation']}")
-        else:
-            print("No search queries data available.")
+            # Group queries by phase
+            phase_queries = {}
+            for query in result.data["search_queries"]:
+                phase = query.get("phase", "unknown")
+                if phase not in phase_queries:
+                    phase_queries[phase] = []
+                phase_queries[phase].append(query)
 
-        print("\n==== SOURCES USED ====")
-        # Group sources by the queries that led to them (for demonstration)
-        unique_sources = {}
-        for source in result.data["sources"]:
-            if source["url"] not in unique_sources:
-                unique_sources[source["url"]] = source
+            # Display each phase's queries
+            phase_order = ["exploration", "deepening", "verification"]
+            phase_icons = {
+                "exploration": "🌍",
+                "deepening": "🔬",
+                "verification": "✓",
+                "unknown": "❓",
+            }
 
-        for i, source in enumerate(unique_sources.values()):
-            print(f"{i + 1}. {source['title']} (Relevance: {source['relevance']:.2f})")
+            for phase in phase_order:
+                if phase in phase_queries:
+                    queries = phase_queries[phase]
+                    icon = phase_icons.get(phase, "•")
+                    print(f"\n{icon} {phase.upper()} Phase ({len(queries)} queries):")
+                    print("-" * 70)
+
+                    for i, query in enumerate(queries, 1):
+                        print(f"\n   Query {i}: {query['query']}")
+                        print(f"   Relevance: {query['relevance']:.2f}")
+                        if query.get("explanation"):
+                            print(f"   Purpose: {query['explanation']}")
+
+            # Show unknown phase queries if any
+            if "unknown" in phase_queries:
+                queries = phase_queries["unknown"]
+                print(f"\n❓ Other Queries ({len(queries)}):")
+                for i, query in enumerate(queries, 1):
+                    print(f"   {i}. {query['query']}")
+
+        # Show top sources with quality indicators
+        print("\n" + "=" * 70)
+        print("📚 TOP SOURCES (Quality Ranked)")
+        print("=" * 70)
+        for i, source in enumerate(result.data["sources"][:8], 1):
+            print(f"\n{i}. {source['title']}")
             print(f"   URL: {source['url']}")
+            print(f"   Relevance: {source['relevance']:.2f}")
 
-        print("\n==== FINAL ANALYSIS ====")
-        # Print just the first few paragraphs for brevity
-        analysis_excerpt = "\n".join(result.data["analysis"].split("\n")[:20])
-        print(f"{analysis_excerpt}\n...[Analysis continues]...")
+        print("\n" + "=" * 70)
+        print("📝 FINAL ANALYSIS PREVIEW")
+        print("=" * 70)
+        analysis_lines = result.data["analysis"].split("\n")
+        preview = "\n".join(analysis_lines[:25])
+        print(
+            f"{preview}\n\n... [Full analysis available in result.data['analysis']] ..."
+        )
+
     else:
-        print("\n==== RESEARCH FAILED ====")
+        print("\n" + "=" * 70)
+        print("❌ RESEARCH FAILED")
+        print("=" * 70)
         print(f"Error: {result.error}")
-        print(
-            f"- Found {len(result.data['findings'])} pieces of information before failure"
-        )
-        if "sources" in result.data:
-            print(f"- Used {len(result.data['sources'])} sources")
-        print(
-            f"- Completed {result.data['completed_steps']} of {result.data['total_steps']} steps"
-        )
+        print(f"- Findings collected: {len(result.data.get('findings', []))}")
+        print(f"- Sources consulted: {len(result.data.get('sources', []))}")
 
 
 async def main():
