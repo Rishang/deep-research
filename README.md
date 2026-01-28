@@ -359,62 +359,6 @@ DeepResearch implements a sophisticated, **phase-based research process** powere
    - Explicitly address contradictions and uncertainties
    - Generate comprehensive report with citations
 
-### Enhanced Research Flow
-
-```mermaid
-flowchart TD
-    A[Initialize Research] --> B[Extract Research Goals]
-    B --> C[Create Knowledge Graph]
-    C --> D[Phase 1: EXPLORATION]
-    
-    D --> D1[Generate 3-5 Exploratory Queries]
-    D1 --> D2[Parallel Search & Quality Scoring]
-    D2 --> D3[Extract from Top 15 Sources]
-    D3 --> D4[Build Knowledge Graph]
-    D4 --> D5[Incremental Analysis]
-    
-    D5 --> E{Knowledge Gaps?}
-    E -->|Yes| F[Phase 2: DEEPENING]
-    E -->|No Complete| K[Phase 5: SYNTHESIS]
-    
-    F --> F1[Generate 2-4 Targeted Queries]
-    F1 --> F2[Intelligent URL Selection]
-    F2 --> F3[Deep Source Extraction]
-    F3 --> F4[Update Knowledge Graph]
-    F4 --> F5[Cross-Reference Analysis]
-    
-    F5 --> G{Unconfirmed Claims?}
-    G -->|Yes 2+| H[Phase 3: VERIFICATION]
-    G -->|No| I{Should Continue?}
-    
-    H --> H1[Generate Verification Queries]
-    H1 --> H2[Search for Evidence]
-    H2 --> H3[Multi-Source Validation]
-    H3 --> H4[Calculate Confidence Scores]
-    
-    H4 --> I{Should Continue?}
-    I -->|Goals Met| K
-    I -->|Gaps Remain| F
-    I -->|Time Low| K
-    I -->|Diminishing Returns| K
-    
-    K --> K1[Organize by Confidence]
-    K1 --> K2[Structure with Graph]
-    K2 --> K3[Include Quality Metrics]
-    K3 --> K4[Flag Contradictions]
-    K4 --> K5[Generate Final Report]
-    K5 --> L[Save Knowledge Graph]
-    L --> M[Return Results]
-
-    style A fill:#4285F4,stroke:#333,stroke-width:2px,color:white
-    style D fill:#34A853,stroke:#333,stroke-width:2px,color:white
-    style F fill:#FBBC05,stroke:#333,stroke-width:2px,color:white
-    style H fill:#EA4335,stroke:#333,stroke-width:2px,color:white
-    style K fill:#9C27B0,stroke:#333,stroke-width:2px,color:white
-    style M fill:#2196F3,stroke:#333,stroke-width:2px,color:white
-    style E,G,I fill:#FF9800,stroke:#333,stroke-width:2px,color:white
-```
-
 ### Key Features of Enhanced Logic
 
 **🎯 Adaptive Strategy**
@@ -473,7 +417,7 @@ Our enhanced research logic provides significant improvements over traditional a
 | **Quality** | All sources equal | Domain authority + recency + depth scoring |
 | **Phases** | Linear iteration | Adaptive (Exploration→Deepening→Verification) |
 
-### Complete Research Workflow
+### Detailed Research Workflow Sequence
 
 ```mermaid
 sequenceDiagram
