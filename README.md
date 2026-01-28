@@ -21,12 +21,32 @@ DeepResearch SDK empowers developers with AI-driven research capabilities, enabl
 
 Originally a TypeScript implementation, this Python SDK adds parallel web scraping, multiple search providers, and a more developer-friendly interface.
 
+### 🚀 What Makes DeepResearch Different?
+
+**Traditional RAG** (Retrieval-Augmented Generation) systems simply retrieve documents and pass them to LLMs. DeepResearch goes far beyond with:
+
+- **🕸️ GraphRAG**: Structures findings into knowledge graphs with entities, relationships, and semantic connections
+- **🔄 Adaptive Phases**: Intelligently transitions between Exploration → Deepening → Verification → Synthesis
+- **✅ Cross-Validation**: Confirms facts across multiple independent sources with confidence scoring
+- **📊 Quality Scoring**: Prioritizes authoritative sources (.edu, .gov, arxiv) with recency and content depth metrics
+- **🔗 Multi-Hop Reasoning**: Discovers indirect connections through relationship traversal
+- **💾 Knowledge Persistence**: Saves research sessions for reuse and builds upon previous knowledge
+- **⚡ Parallel Processing**: Executes multiple queries simultaneously with intelligent aggregation
+- **🎯 Goal-Based Research**: Terminates when objectives are met, not at arbitrary depth limits
+
 ```mermaid
 graph TD
-    subgraph "DeepResearch SDK"
-        A[Deep Research] --> W[Web Clients]
+    subgraph "DeepResearch SDK with GraphRAG"
+        A[Deep Research Engine] --> RP[Research Phases]
+        A --> W[Web Clients]
         A --> C[LLM Integration]
         A --> D[Research Callbacks]
+        A --> KG[GraphRAG Layer]
+
+        RP --> RP1[Exploration]
+        RP --> RP2[Deepening]
+        RP --> RP3[Verification]
+        RP --> RP4[Synthesis]
 
         W --> B1[DoclingClient]
         W --> B2[DoclingServerClient]
@@ -51,18 +71,35 @@ graph TD
         D --> K[Progress Tracking]
         D --> L[Source Monitoring]
         D --> M[Activity Logging]
+
+        KG --> KG1[Entity Extraction]
+        KG --> KG2[Relationship Mapping]
+        KG --> KG3[Knowledge Graph]
+        KG --> KG4[PageRank & Communities]
+        KG --> KG5[Graph Retrieval]
+        KG --> KG6[Session Persistence]
+
+        KG3 --> QS[Quality Scoring]
+        QS --> QS1[Domain Authority]
+        QS --> QS2[Recency Score]
+        QS --> QS3[Content Depth]
+        QS --> QS4[Diversity Bonus]
     end
 
     classDef primary fill:#4285F4,stroke:#333,stroke-width:2px,color:white
     classDef secondary fill:#34A853,stroke:#333,stroke-width:2px,color:white
     classDef tertiary fill:#FBBC05,stroke:#333,stroke-width:2px,color:white
     classDef quaternary fill:#EA4335,stroke:#333,stroke-width:2px,color:white
+    classDef graphrag fill:#9C27B0,stroke:#333,stroke-width:2px,color:white
 
     class A primary
-    class W,C,D secondary
+    class RP,W,C,D,KG secondary
+    class RP1,RP2,RP3,RP4 tertiary
     class B1,B2,B3 secondary
     class E,F,G,G2,G3,H,I,J tertiary
     class K,L,M quaternary
+    class KG1,KG2,KG3,KG4,KG5,KG6 graphrag
+    class QS,QS1,QS2,QS3,QS4 quaternary
 ```
 
 ## 📋 Table of Contents
@@ -106,6 +143,15 @@ graph TD
   - Automatic gap identification in research
   - Self-guided exploration of topics
   - Depth-first approach with backtracking
+  - Dynamic phase-based research (Exploration → Deepening → Verification → Synthesis)
+
+- **🕸️ GraphRAG Knowledge Graphs** ✨ NEW
+  - Automatic entity and relationship extraction from findings
+  - Build persistent knowledge graphs from research sessions
+  - Graph-based retrieval for enhanced context
+  - Community detection and PageRank for entity importance
+  - Multi-hop reasoning across connected entities
+  - Session persistence for knowledge reuse
 
 - **🧩 Modular Architecture**
   - Multiple web client options (Docling, Docling-Server, Firecrawl)
@@ -274,33 +320,333 @@ You'll see research progress in real-time, and within about a minute, get an AI-
 
 ## 🔬 How It Works
 
-DeepResearch implements an iterative research process:
+DeepResearch implements a sophisticated, **phase-based research process** powered by GraphRAG:
 
-1. **Initialization**: Configure models, search providers and parameters
-2. **Search**: Find relevant sources on the topic from multiple providers
-3. **Extraction**: Process and extract content from top sources in parallel
-4. **Analysis**: Analyze findings, identify knowledge gaps and plan next steps
-5. **Iteration**: Continue research with refined focus based on identified gaps
-6. **Synthesis**: Generate comprehensive analysis with citations
+### Research Phases
+
+1. **Initialization**
+   - Extract research goals from topic using LLM
+   - Initialize knowledge graph for entity/relationship tracking
+   - Set up quality scoring and validation systems
+
+2. **Exploration Phase** (Breadth-First)
+   - Generate 3-5 broad exploratory queries covering different aspects
+   - Execute parallel searches across multiple providers (Brave, DuckDuckGo)
+   - Score sources by domain authority, recency, and content depth
+   - Extract from top 15 diverse, high-quality sources
+   - Build initial knowledge graph with entities and relationships
+   - Perform incremental analysis to identify knowledge gaps
+
+3. **Deepening Phase** (Depth-First)
+   - Generate 2-4 targeted queries to address specific knowledge gaps
+   - Focus on authoritative sources for technical details
+   - Extract from specialized, high-quality sources
+   - Update knowledge graph with new entities and connections
+   - Cross-reference findings with existing knowledge
+   - Detect confirmations and contradictions
+
+4. **Verification Phase** (Cross-Validation)
+   - Generate verification queries for unconfirmed claims
+   - Search for corroborating or conflicting evidence
+   - Require multiple independent sources for confirmation
+   - Flag contradictions between sources
+   - Calculate confidence scores based on source agreement
+
+5. **Synthesis Phase**
+   - Organize findings by confidence levels
+   - Structure analysis using knowledge graph relationships
+   - Include source quality metrics and confidence scores
+   - Explicitly address contradictions and uncertainties
+   - Generate comprehensive report with citations
+
+### Enhanced Research Flow
 
 ```mermaid
-flowchart LR
-    A[Initialization] --> B[Search]
-    B --> C[Extraction]
-    C --> D[Analysis]
-    D --> E{Continue?}
-    E -->|Yes| F[Refine Focus]
-    F --> B
-    E -->|No| G[Final Synthesis]
+flowchart TD
+    A[Initialize Research] --> B[Extract Research Goals]
+    B --> C[Create Knowledge Graph]
+    C --> D[Phase 1: EXPLORATION]
+    
+    D --> D1[Generate 3-5 Exploratory Queries]
+    D1 --> D2[Parallel Search & Quality Scoring]
+    D2 --> D3[Extract from Top 15 Sources]
+    D3 --> D4[Build Knowledge Graph]
+    D4 --> D5[Incremental Analysis]
+    
+    D5 --> E{Knowledge Gaps?}
+    E -->|Yes| F[Phase 2: DEEPENING]
+    E -->|No Complete| K[Phase 5: SYNTHESIS]
+    
+    F --> F1[Generate 2-4 Targeted Queries]
+    F1 --> F2[Intelligent URL Selection]
+    F2 --> F3[Deep Source Extraction]
+    F3 --> F4[Update Knowledge Graph]
+    F4 --> F5[Cross-Reference Analysis]
+    
+    F5 --> G{Unconfirmed Claims?}
+    G -->|Yes 2+| H[Phase 3: VERIFICATION]
+    G -->|No| I{Should Continue?}
+    
+    H --> H1[Generate Verification Queries]
+    H1 --> H2[Search for Evidence]
+    H2 --> H3[Multi-Source Validation]
+    H3 --> H4[Calculate Confidence Scores]
+    
+    H4 --> I{Should Continue?}
+    I -->|Goals Met| K
+    I -->|Gaps Remain| F
+    I -->|Time Low| K
+    I -->|Diminishing Returns| K
+    
+    K --> K1[Organize by Confidence]
+    K1 --> K2[Structure with Graph]
+    K2 --> K3[Include Quality Metrics]
+    K3 --> K4[Flag Contradictions]
+    K4 --> K5[Generate Final Report]
+    K5 --> L[Save Knowledge Graph]
+    L --> M[Return Results]
 
     style A fill:#4285F4,stroke:#333,stroke-width:2px,color:white
-    style B fill:#34A853,stroke:#333,stroke-width:2px,color:white
-    style C fill:#FBBC05,stroke:#333,stroke-width:2px,color:white
-    style D fill:#EA4335,stroke:#333,stroke-width:2px,color:white
-    style E fill:#673AB7,stroke:#333,stroke-width:2px,color:white
-    style F fill:#FF9800,stroke:#333,stroke-width:2px,color:white
-    style G fill:#2196F3,stroke:#333,stroke-width:2px,color:white
+    style D fill:#34A853,stroke:#333,stroke-width:2px,color:white
+    style F fill:#FBBC05,stroke:#333,stroke-width:2px,color:white
+    style H fill:#EA4335,stroke:#333,stroke-width:2px,color:white
+    style K fill:#9C27B0,stroke:#333,stroke-width:2px,color:white
+    style M fill:#2196F3,stroke:#333,stroke-width:2px,color:white
+    style E,G,I fill:#FF9800,stroke:#333,stroke-width:2px,color:white
 ```
+
+### Key Features of Enhanced Logic
+
+**🎯 Adaptive Strategy**
+- Research phases adapt to current knowledge state
+- Exploration → Deepening → Verification flow
+- Dynamic termination based on goals, not just depth
+
+**📊 Quality Scoring**
+- Domain authority (prioritizes .edu, .gov, arxiv.org)
+- Recency scoring with date-based decay
+- Content depth assessment
+- Diversity bonus for different domains
+- Gap relevance calculation
+
+**🔍 Intelligent Selection**
+- Top 15 sources per phase (up from 9)
+- Composite scoring: 40% quality + 30% diversity + 30% relevance
+- Automatic deduplication via URL tracking
+- Quality metrics stored for transparency
+
+**✅ Cross-Validation**
+- Confirmed facts require multiple independent sources
+- Contradiction detection and flagging
+- Confidence scores (0.0-1.0) for all claims
+- Unconfirmed claims tracked for verification
+
+**🕸️ GraphRAG Integration**
+- Automatic entity extraction (concepts, people, technologies)
+- Relationship mapping (causes, enables, supports, contradicts)
+- PageRank for entity importance
+- Community detection for clustering
+- Multi-hop reasoning across graph
+- Session persistence for knowledge reuse
+
+**🎲 Dynamic Termination**
+- Goals met (85% coverage threshold)
+- No significant gaps remain
+- Diminishing returns (novelty < 10%)
+- Time limit approaching
+- Maximum depth safety limit
+
+### Research Logic Improvements
+
+Our enhanced research logic provides significant improvements over traditional approaches:
+
+| Feature | Traditional RAG | DeepResearch Enhanced |
+|---------|----------------|---------------------|
+| **Query Strategy** | Single query per iteration | 3-5 parallel queries per phase |
+| **Source Selection** | First N results | Quality-scored & diversified top 15 |
+| **Knowledge Structure** | Flat list of findings | Knowledge graph with entities & relationships |
+| **Validation** | None | Multi-source cross-validation |
+| **Confidence** | Binary (found/not found) | Scored 0.0-1.0 with source agreement |
+| **Termination** | Fixed depth counter | Goal-based with diminishing returns detection |
+| **Memory** | Session-only | Persistent knowledge graphs |
+| **Retrieval** | Keyword search | Multi-hop graph reasoning |
+| **Quality** | All sources equal | Domain authority + recency + depth scoring |
+| **Phases** | Linear iteration | Adaptive (Exploration→Deepening→Verification) |
+
+### Complete Research Workflow
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant DR as DeepResearch
+    participant QG as Query Generator
+    participant WC as Web Client
+    participant EE as Entity Extractor
+    participant KG as Knowledge Graph
+    participant AN as Analyzer
+    participant SY as Synthesizer
+
+    U->>DR: research(topic)
+    DR->>QG: Extract research goals
+    DR->>KG: Initialize knowledge graph
+    
+    Note over DR: EXPLORATION PHASE
+    DR->>QG: Generate 3-5 exploratory queries
+    QG-->>DR: Broad queries
+    DR->>WC: Parallel search (3-5 queries)
+    WC-->>DR: Search results
+    DR->>DR: Quality scoring & ranking
+    DR->>WC: Extract top 15 sources
+    WC-->>DR: Extracted content
+    DR->>EE: Extract entities & relationships
+    EE-->>KG: Add to knowledge graph
+    DR->>AN: Incremental analysis
+    AN-->>DR: Gaps & confidence scores
+    
+    Note over DR: DEEPENING PHASE
+    DR->>QG: Generate 2-4 gap-focused queries
+    QG-->>DR: Targeted queries
+    DR->>WC: Intelligent search
+    WC-->>DR: Quality-filtered results
+    DR->>WC: Extract from specialized sources
+    WC-->>DR: Deep content
+    DR->>EE: Extract & enrich graph
+    EE-->>KG: Update knowledge graph
+    DR->>AN: Cross-reference analysis
+    AN-->>DR: Confirmed facts & contradictions
+    
+    Note over DR: VERIFICATION PHASE (if needed)
+    DR->>QG: Generate verification queries
+    QG-->>DR: Fact-checking queries
+    DR->>WC: Search for corroboration
+    WC-->>DR: Verification evidence
+    DR->>AN: Multi-source validation
+    AN-->>DR: Updated confidence scores
+    
+    Note over DR: Check Termination
+    DR->>DR: Assess: goals met? gaps remain?
+    alt Goals Met or Time Low
+        DR->>KG: Calculate PageRank
+        KG->>KG: Detect communities
+        DR->>SY: Generate final synthesis
+        SY-->>DR: Comprehensive report
+        DR->>KG: Save knowledge graph
+        DR-->>U: ResearchResult with graph
+    else Continue Research
+        DR->>DR: Return to DEEPENING
+    end
+```
+
+## 🕸️ GraphRAG: Knowledge Graph Integration
+
+DeepResearch now includes **GraphRAG** (Graph Retrieval-Augmented Generation), combining knowledge graphs with LLMs for enhanced research capabilities.
+
+### What is GraphRAG?
+
+GraphRAG structures your research findings into a knowledge graph, enabling:
+
+- **Relationship Discovery**: Automatically identify connections between concepts, people, and technologies
+- **Entity Importance**: PageRank and centrality metrics highlight key entities
+- **Multi-Hop Reasoning**: Traverse relationships to uncover indirect connections
+- **Knowledge Persistence**: Save and reuse knowledge graphs across research sessions
+- **Enhanced Retrieval**: Query the graph for precise, contextual information
+
+### Key Features
+
+1. **Automatic Entity Extraction**: Extracts entities (concepts, people, organizations, technologies) from findings
+2. **Relationship Mapping**: Identifies relationships like "causes", "enables", "contradicts", "supports"
+3. **Community Detection**: Groups related entities into communities
+4. **PageRank Analysis**: Ranks entities by importance in the knowledge network
+5. **Session Persistence**: Save graphs to disk and reload for follow-up research
+
+### Using GraphRAG
+
+```python
+from deep_research import DeepResearch
+from deep_research.utils import DoclingClient
+
+# Enable GraphRAG (enabled by default)
+researcher = DeepResearch(
+    web_client=DoclingClient(brave_api_key="your-key"),
+    llm_api_key="your-openai-key",
+    enable_graphrag=True,  # Enable knowledge graph
+    graphrag_storage_path="./my_graphs"  # Optional custom path
+)
+
+# Perform research - graph is built automatically
+result = await researcher.research("Impact of quantum computing on cryptography")
+
+# Access graph information
+if result.success:
+    kg_data = result.data['knowledge_graph']
+    print(f"Entities: {kg_data['total_entities']}")
+    print(f"Relationships: {kg_data['total_relationships']}")
+    print(f"Top entities: {kg_data['top_entities']}")
+```
+
+### Querying the Knowledge Graph
+
+```python
+from deep_research.graphrag import GraphQuery
+
+# Load a previous research session
+researcher.load_knowledge_graph(session_id)
+
+# Query the graph
+graph_query = GraphQuery(
+    query_text="What are the main challenges in quantum cryptography?",
+    max_hops=2,  # Traverse up to 2 relationships
+    max_results=10,
+    use_semantic_search=True
+)
+
+result = await researcher.graphrag_retriever.retrieve(graph_query)
+
+# Access retrieved entities and relationships
+for entity in result.entities:
+    print(f"{entity.name} ({entity.type}): {entity.description}")
+
+for rel in result.relationships:
+    print(f"{rel.source_id} --[{rel.type}]--> {rel.target_id}")
+```
+
+### Graph Persistence
+
+Knowledge graphs are automatically saved after each research session:
+
+```python
+# Graphs are saved to: ~/.deep_research/graphs/<session_id>.json
+
+# List all saved sessions
+from deep_research.graphrag import KnowledgeGraphManager
+
+manager = KnowledgeGraphManager()
+sessions = manager.list_sessions()
+print(f"Available sessions: {sessions}")
+
+# Load and reuse a previous session
+researcher.load_knowledge_graph(sessions[0])
+```
+
+### Complete GraphRAG Example
+
+See [`examples/graphrag_example.py`](examples/graphrag_example.py) for a comprehensive demonstration including:
+- Research with GraphRAG enabled
+- Querying the knowledge graph
+- Loading previous research sessions
+- Entity and relationship exploration
+
+### GraphRAG Architecture
+
+Based on best practices from:
+- **[Memgraph GraphRAG](https://memgraph.com/docs/ai-ecosystem/graph-rag)**: Graph database optimized for AI applications
+- **[Mem0 Memory Layer](https://github.com/mem0ai/mem0)**: Universal memory layer for AI agents
+
+Key algorithms implemented:
+- **PageRank**: Identify influential entities in the knowledge network
+- **Community Detection**: Group related concepts and entities
+- **Multi-hop Traversal**: Navigate complex relationship paths
+- **Semantic Search**: Find entities by meaning, not just keywords
 
 ## 📊 Usage Examples
 
