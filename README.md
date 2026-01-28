@@ -86,11 +86,11 @@ graph TD
         QS --> QS4[Diversity Bonus]
     end
 
-    classDef primary fill:#4285F4,stroke:#333,stroke-width:2px,color:white
-    classDef secondary fill:#34A853,stroke:#333,stroke-width:2px,color:white
-    classDef tertiary fill:#FBBC05,stroke:#333,stroke-width:2px,color:white
-    classDef quaternary fill:#EA4335,stroke:#333,stroke-width:2px,color:white
-    classDef graphrag fill:#9C27B0,stroke:#333,stroke-width:2px,color:white
+    classDef primary fill:#1e3a8a,stroke:#60a5fa,stroke-width:2px,color:#e0e7ff
+    classDef secondary fill:#065f46,stroke:#34d399,stroke-width:2px,color:#d1fae5
+    classDef tertiary fill:#92400e,stroke:#fbbf24,stroke-width:2px,color:#fef3c7
+    classDef quaternary fill:#7c2d12,stroke:#fb923c,stroke-width:2px,color:#fed7aa
+    classDef graphrag fill:#581c87,stroke:#c084fc,stroke-width:2px,color:#f3e8ff
 
     class A primary
     class RP,W,C,D,KG secondary
