@@ -117,42 +117,7 @@ class MarkItDownClient(BaseWebClient):
                     f"{base_terms} vs traditional",
                 ]
 
-            # Create WebSearchItem objects
-            search_results = [
-                WebSearchItem(
-                    url=f"https://en.wikipedia.org/wiki/{search_terms}",
-                    title=f"Wikipedia - {query}",
-                    description=f"Encyclopedia article about {query}",
-                    relevance=0.95,
-                    provider="mock",
-                    date="",
-                ),
-                WebSearchItem(
-                    url=f"https://arxiv.org/search/?query={search_terms}&searchtype=all",
-                    title=f"arXiv Papers - {query}",
-                    description=f"Scientific papers related to {query}",
-                    relevance=0.9,
-                    provider="mock",
-                    date="",
-                ),
-                WebSearchItem(
-                    url=f"https://scholar.google.com/scholar?q={search_terms}",
-                    title=f"Google Scholar - {query}",
-                    description=f"Academic resources about {query}",
-                    relevance=0.85,
-                    provider="mock",
-                    date="",
-                ),
-                WebSearchItem(
-                    url=f"https://www.semanticscholar.org/search?q={search_terms}",
-                    title=f"Semantic Scholar - {query}",
-                    description=f"Academic papers and research about {query}",
-                    relevance=0.83,
-                    provider="mock",
-                    date="",
-                ),
-            ]
-
+            search_results = []
             # Add related searches with lower relevance
             for i, related_query in enumerate(related_queries):
                 related_terms = related_query.replace(" ", "+")
@@ -174,11 +139,11 @@ class MarkItDownClient(BaseWebClient):
             try:
                 search_terms = query.replace(" ", "+")
                 fallback_result = WebSearchItem(
-                    url=f"https://en.wikipedia.org/wiki/{search_terms}",
-                    title=f"Wikipedia - {query}",
-                    description=f"Encyclopedia article about {query}",
+                    url=f"https://duckduckgo.com/search?q={search_terms}",
+                    title=f"DuckDuckGo - {query}",
+                    description=f"Search results from DuckDuckGo for {query}",
                     relevance=1.0,
-                    provider="emergency_fallback",
+                    provider="duckduckgo",
                     date="",
                 )
                 return SearchResult(success=True, data=[fallback_result])

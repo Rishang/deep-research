@@ -50,8 +50,8 @@ async def example_with_markitdown(topic: str):
         ),
         base_url="https://openrouter.ai/api/v1",
         llm_api_key=openai_api_key,
-        research_model="openrouter/openai/gpt-4.1-nano",
-        reasoning_model="openrouter/google/gemini-3-flash-preview",
+        research_model="openrouter/openai/gpt-4.1-mini",
+        reasoning_model="openrouter/openai/gpt-4.1-mini",
         max_depth=3,  # Allow deeper research
         time_limit_minutes=2.0,  # Allow time for phases
         enable_graphrag=True,  # ✨ Enable GraphRAG
@@ -148,7 +148,7 @@ async def example_with_markitdown(topic: str):
 
         print("\n📝 Final Analysis Preview:")
         print("-" * 70)
-        print(result.data["analysis"][:600] + "...")
+        print(result.data["analysis"] + "...")
         print("-" * 70)
 
     else:
