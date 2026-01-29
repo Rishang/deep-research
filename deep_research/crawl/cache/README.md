@@ -1,6 +1,6 @@
-# Docling Cache Module
+# Web Client Cache Module
 
-This module provides caching functionality for the Docling client to improve performance and reduce API calls.
+This module provides caching functionality for web clients (MarkItDown, Firecrawl) to improve performance and reduce API calls.
 
 ## Features
 
@@ -25,23 +25,23 @@ pip install pymysql
 
 ## Usage
 
-### Basic Usage with DoclingClient
+### Basic Usage with MarkItDownClient
 
 ```python
-from deep_research.utils.cache import CacheConfig
-from deep_research.utils.docling_client import DoclingClient
+from deep_research.crawl.cache import CacheConfig
+from deep_research.crawl.markitdown_client import MarkItDownClient
 
 # Create a cache configuration
 cache_config = CacheConfig(
     enabled=True,  # Enable caching
     ttl_seconds=3600,  # Cache for 1 hour
-    db_url="sqlite:///docling_cache.db",  # Use SQLite
+    db_url="sqlite:///research_cache.db",  # Use SQLite
     create_tables=True,  # Create database tables if they don't exist
 )
 
-# Initialize Docling client with caching
-client = DoclingClient(
-    api_key="your-api-key",
+# Initialize MarkItDown client with caching
+client = MarkItDownClient(
+    brave_api_key="your-api-key",
     cache_config=cache_config,
 )
 
@@ -53,7 +53,7 @@ results = await client.search("quantum computing")
 
 ```python
 from pydantic import BaseModel
-from deep_research.utils.cache import cache, init_cache, CacheConfig
+from deep_research.crawl.cache import cache, init_cache, CacheConfig
 
 # Initialize cache
 init_cache(CacheConfig(enabled=True))
@@ -73,32 +73,32 @@ async def search_function(self, query: str, max_results: int = 10):
 ### Disabling Cache for Specific Sessions
 
 ```python
-from deep_research.utils.cache import CacheConfig
-from deep_research.utils.docling_client import DoclingClient
+from deep_research.crawl.cache import CacheConfig
+from deep_research.crawl.markitdown_client import MarkItDownClient
 
 # Create a cache configuration with caching disabled
 cache_config = CacheConfig(
     enabled=False,
 )
 
-# Initialize Docling client with caching disabled by default
-client = DoclingClient(
-    api_key="your-api-key",
+# Initialize MarkItDown client with caching disabled by default
+client = MarkItDownClient(
+    brave_api_key="your-api-key",
     cache_config=cache_config,
 )
 
 # Re-enable cache for a specific session
-from deep_research.utils.cache import init_cache
+from deep_research.crawl.cache import init_cache
 init_cache(CacheConfig(enabled=True))
 ```
 
 ### Clearing Cache
 
 ```python
-from deep_research.utils.cache import clear_cache, clear_expired_cache
+from deep_research.crawl.cache import clear_cache, clear_expired_cache
 
 # Clear cache for a specific function
-clear_cache(function_name="DoclingClient.search")
+clear_cache(function_name="MarkItDownClient.search")
 
 # Clear all expired cache entries
 clear_expired_cache()
@@ -115,7 +115,7 @@ clear_cache()
 # Default SQLite configuration (file in current directory)
 cache_config = CacheConfig(
     enabled=True,
-    db_url="sqlite:///docling_cache.db",  # SQLite file in current directory
+    db_url="sqlite:///research_cache.db",  # SQLite file in current directory
     create_tables=True
 )
 
@@ -141,7 +141,7 @@ cache_config = CacheConfig(
 cache_config = CacheConfig(
     enabled=True,
     ttl_seconds=3600,
-    db_url="mysql+pymysql://username:password@localhost/docling_cache",
+    db_url="mysql+pymysql://username:password@localhost/research_cache",
     create_tables=True,  # Will create tables if they don't exist
 )
 ```
@@ -150,12 +150,12 @@ cache_config = CacheConfig(
 
 If you don't want to use caching at all, you have several options:
 
-#### Option 1: Don't provide cache_config when initializing DoclingClient
+#### Option 1: Don't provide cache_config when initializing MarkItDownClient
 
 ```python
 # No cache_config means caching is disabled by default
-client = DoclingClient(
-    api_key="your-api-key",
+client = MarkItDownClient(
+    brave_api_key="your-api-key",
     # No cache_config provided = caching disabled
 )
 ```
@@ -168,8 +168,8 @@ cache_config = CacheConfig(
     enabled=False,  # Explicitly disable caching
 )
 
-client = DoclingClient(
-    api_key="your-api-key",
+client = MarkItDownClient(
+    brave_api_key="your-api-key",
     cache_config=cache_config,  # Cache functionality exists but is disabled
 )
 ```
@@ -177,7 +177,7 @@ client = DoclingClient(
 #### Option 3: Disable caching globally with init_cache
 
 ```python
-from deep_research.utils.cache import init_cache, CacheConfig
+from deep_research.crawl.cache import init_cache, CacheConfig
 
 # Disable caching globally
 init_cache(CacheConfig(enabled=False))

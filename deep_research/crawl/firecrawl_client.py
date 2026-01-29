@@ -11,8 +11,9 @@ from pydantic import HttpUrl
 from ..models import ExtractResult, SearchResult, WebSearchItem
 from .base_client import BaseWebClient
 from .cache import CacheConfig, cache
-from .docling_client_models import ScrapeParams, SearchParams
+from .web_client_models import ScrapeParams, SearchParams
 from .web import BraveSearchClient, DuckDuckGoSearchClient
+from ..utils import logger
 
 
 class FirecrawlClient(BaseWebClient):
@@ -98,14 +99,16 @@ class FirecrawlClient(BaseWebClient):
                 return await self.brave_search.search(query, max_results)
             except Exception as e:
                 # If Brave Search fails, fall back to DuckDuckGo
-                print(f"Brave search failed, falling back to DuckDuckGo: {str(e)}")
+                logger.warning(
+                    f"Brave search failed, falling back to DuckDuckGo: {str(e)}"
+                )
 
         # Use DuckDuckGo search as first fallback
         if self.duckduckgo_search:
             try:
                 return await self.duckduckgo_search.search(query, max_results)
             except Exception as e:
-                print(
+                logger.warning(
                     f"DuckDuckGo search failed, falling back to mock results: {str(e)}"
                 )
 

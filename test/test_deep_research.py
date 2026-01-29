@@ -12,14 +12,14 @@ sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 # Import after path manipulation
 from deep_research import DeepResearch  # noqa: E402
 from deep_research.core.callbacks import PrintCallback  # noqa: E402
-from deep_research.utils.docling_client import DoclingClient  # noqa: E402
+from deep_research.crawl.markitdown_client import MarkItDownClient  # noqa: E402
 
 
 async def main():
     """Run a simplified test of the DeepResearch class."""
     # Create a Deep Research instance with minimal options
     researcher = DeepResearch(
-        docling_client=DoclingClient(
+        web_client=MarkItDownClient(
             brave_api_key=os.environ.get(
                 "BRAVE_SEARCH_API_KEY", "fake-key-for-testing"
             ),
@@ -37,7 +37,7 @@ async def main():
 
     # Test client methods directly for basic functionality
     print("\nTesting search:")
-    search_result = await researcher.docling_client.search(
+    search_result = await researcher.web_client.search(
         "quantum computing", max_results=2
     )
     print(f"Search success: {search_result.success}")

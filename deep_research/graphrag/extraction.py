@@ -8,6 +8,7 @@ from typing import List, Tuple
 
 import litellm
 
+from ..utils import logger
 from .models import Entity, EntityType, Relationship, RelationshipType
 
 
@@ -98,6 +99,7 @@ Important:
                 temperature=0,
                 drop_params=True,
                 base_url=self.base_url,
+                stream=False,  # Explicitly disable streaming for OpenRouter compatibility
             )
 
             result_text = response.choices[0].message.content
@@ -112,7 +114,7 @@ Important:
 
                 parsed = json.loads(result_text)
             except json.JSONDecodeError:
-                print(f"Failed to parse extraction result: {result_text[:200]}")
+                logger.error(f"Failed to parse extraction result: {result_text[:200]}")
                 return [], []
 
             # Convert to Entity and Relationship objects
@@ -165,7 +167,7 @@ Important:
             return entities, relationships
 
         except Exception as e:
-            print(f"Entity extraction error: {str(e)}")
+            logger.error(f"Entity extraction error: {str(e)}")
             return [], []
 
     def _generate_entity_id(self, name: str) -> str:
@@ -219,6 +221,7 @@ Provide an enriched description and extract any additional properties.
                 temperature=0,
                 drop_params=True,
                 base_url=self.base_url,
+                stream=False,  # Explicitly disable streaming for OpenRouter compatibility
             )
 
             result_text = response.choices[0].message.content
@@ -237,5 +240,5 @@ Provide an enriched description and extract any additional properties.
             return entity
 
         except Exception as e:
-            print(f"Entity enrichment error: {str(e)}")
+            logger.error(f"Entity enrichment error: {str(e)}")
             return entity

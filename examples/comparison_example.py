@@ -12,8 +12,8 @@ import asyncio
 import os
 import logging
 from deep_research import DeepResearch
-from deep_research.utils import DoclingClient
-from deep_research.utils.cache import CacheConfig
+from deep_research.crawl import MarkItDownClient
+from deep_research.crawl.cache import CacheConfig
 
 logging.basicConfig(level=logging.WARNING)  # Reduce noise for comparison
 
@@ -33,7 +33,7 @@ async def traditional_approach():
     print("  • No validation\n")
 
     researcher = DeepResearch(
-        web_client=DoclingClient(
+        web_client=MarkItDownClient(
             brave_api_key=brave_api_key,
             max_concurrent_requests=5,
         ),
@@ -90,7 +90,7 @@ async def enhanced_approach():
     print("  ✅ Dynamic termination\n")
 
     researcher = DeepResearch(
-        web_client=DoclingClient(
+        web_client=MarkItDownClient(
             brave_api_key=brave_api_key,
             max_concurrent_requests=10,
             cache_config=CacheConfig(enabled=True),

@@ -12,8 +12,8 @@ import asyncio
 import os
 import logging
 from deep_research import DeepResearch
-from deep_research.utils import DoclingClient
-from deep_research.utils.cache import CacheConfig
+from deep_research.crawl import MarkItDownClient
+from deep_research.crawl.cache import CacheConfig
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
@@ -41,9 +41,9 @@ async def query_generation_example():
     print("=" * 70)
     print(f"\n📚 Research Topic: {topic}\n")
 
-    # Create a Deep Research instance with DoclingClient
+    # Create a Deep Research instance with MarkItDownClient
     researcher = DeepResearch(
-        web_client=DoclingClient(
+        web_client=MarkItDownClient(
             brave_api_key=brave_api_key,
             max_concurrent_requests=8,
             cache_config=CacheConfig(enabled=True),

@@ -25,11 +25,6 @@ class SourceQualityAssessor:
         Returns:
             SourceQualityMetrics with quality scores.
         """
-        # Domain authority (based on TLD and known authoritative domains)
-        domain_authority = SourceQualityAssessor._calculate_domain_authority(
-            str(search_item.url)
-        )
-
         # Recency score (based on date if available)
         recency_score = SourceQualityAssessor._calculate_recency_score(search_item.date)
 
@@ -40,57 +35,11 @@ class SourceQualityAssessor:
         cross_reference_score = 0.0
 
         return SourceQualityMetrics(
-            domain_authority=domain_authority,
             recency_score=recency_score,
             content_depth=content_depth,
             citation_count=0,
             cross_reference_score=cross_reference_score,
         )
-
-    @staticmethod
-    def _calculate_domain_authority(url: str) -> float:
-        """Calculate domain authority score based on the URL."""
-        try:
-            parsed = urlparse(url)
-            domain = parsed.netloc.lower()
-
-            # High authority domains
-            high_authority = [
-                "edu",
-                "gov",
-                "arxiv.org",
-                "scholar.google",
-                "ieee.org",
-                "acm.org",
-                "nature.com",
-                "science.org",
-                "nih.gov",
-                "who.int",
-            ]
-
-            # Medium authority domains
-            medium_authority = [
-                "org",
-                "wikipedia.org",
-                "medium.com",
-                "stackoverflow.com",
-                "github.com",
-            ]
-
-            # Check for high authority
-            for auth_domain in high_authority:
-                if auth_domain in domain:
-                    return 0.9
-
-            # Check for medium authority
-            for auth_domain in medium_authority:
-                if auth_domain in domain:
-                    return 0.7
-
-            # Default score for other domains
-            return 0.5
-        except Exception:
-            return 0.5
 
     @staticmethod
     def _calculate_recency_score(date_str: str) -> float:

@@ -9,6 +9,7 @@ from typing import List
 
 import litellm
 
+from ..utils import logger
 from ..models.models import EnhancedResearchState, SearchQuery, UnconfirmedClaim
 
 
@@ -129,7 +130,7 @@ Respond with a JSON array:
 
             return search_queries
         except Exception as e:
-            print(f"Error generating exploratory queries: {str(e)}")
+            logger.error(f"Error generating exploratory queries: {str(e)}")
             return [SearchQuery(query=topic, phase="exploration")]
 
     async def generate_deepening_queries(
@@ -215,7 +216,7 @@ Respond with a JSON array:
                 else [SearchQuery(query=priority_gaps[0], phase="deepening")]
             )
         except Exception as e:
-            print(f"Error generating deepening queries: {str(e)}")
+            logger.error(f"Error generating deepening queries: {str(e)}")
             return [SearchQuery(query=priority_gaps[0], phase="deepening")]
 
     async def generate_verification_queries(
@@ -294,7 +295,7 @@ Respond with a JSON array:
 
             return search_queries[:3] if search_queries else []
         except Exception as e:
-            print(f"Error generating verification queries: {str(e)}")
+            logger.error(f"Error generating verification queries: {str(e)}")
             return []
 
     async def extract_research_goals(self, topic: str) -> List[str]:
@@ -338,5 +339,5 @@ Respond with a JSON array of strings:
             goals = json.loads(result_text)
             return goals if isinstance(goals, list) else []
         except Exception as e:
-            print(f"Error extracting research goals: {str(e)}")
+            logger.error(f"Error extracting research goals: {str(e)}")
             return []

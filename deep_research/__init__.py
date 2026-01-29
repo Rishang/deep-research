@@ -7,12 +7,15 @@ import hashlib
 import json
 import time
 from datetime import datetime
-from typing import Dict, List, Optional, Tuple, Union
-from urllib.parse import urlparse
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import litellm
 
 from .core.callbacks import PrintCallback, ResearchCallback
+from .core.prompts import render_prompt
+from .core.source_quality import SourceQualityAssessor
+from .core.query_generation import QueryGenerator
+from .utils import logger
 from .models.models import (
     ActivityItem,
     ActivityStatus,
@@ -28,10 +31,8 @@ from .models.models import (
     UnconfirmedClaim,
     WebSearchItem,
 )
-from .utils.base_client import BaseWebClient
-from .utils.docling_client import DoclingClient
-from .utils.docling_server_client import DoclingServerClient
-from .utils.firecrawl_client import FirecrawlClient
+from .crawl import BaseWebClient, MarkItDownClient, FirecrawlClient
+from .crawl.cache import DumpManager
 
 
 class DeepResearch:
@@ -42,9 +43,7 @@ class DeepResearch:
 
     def __init__(
         self,
-        web_client: Union[
-            BaseWebClient, DoclingClient, DoclingServerClient, FirecrawlClient
-        ],
+        web_client: Union[BaseWebClient, MarkItDownClient, FirecrawlClient],
         llm_api_key: Optional[str] = None,
         research_model: str = "gpt-4o-mini",
         reasoning_model: str = "o3-mini",
@@ -55,12 +54,14 @@ class DeepResearch:
         max_concurrent_requests: int = 5,
         enable_graphrag: bool = True,
         graphrag_storage_path: Optional[str] = None,
+        dump_files: bool = False,
+        dump_files_path: Optional[str] = "./dumps",
     ):
         """
         Initialize the Deep Research instance.
 
         Args:
-            web_client (Union[BaseWebClient, DoclingClient, DoclingServerClient, FirecrawlClient]):
+            web_client (Union[BaseWebClient, MarkItDownClient, FirecrawlClient]):
                 An initialized web client instance. Can be any client that implements BaseWebClient interface.
             llm_api_key (Optional[str], optional): API key for LLM. Defaults to None.
             research_model (str, optional): Model to use for research. Defaults to "gpt-4o-mini".
@@ -74,6 +75,8 @@ class DeepResearch:
                 Defaults to 5.
             enable_graphrag (bool, optional): Enable GraphRAG knowledge graph. Defaults to True.
             graphrag_storage_path (Optional[str], optional): Path for GraphRAG storage. Defaults to None.
+            dump_files (bool, optional): Enable saving research dumps to disk. Defaults to False.
+            dump_files_path (Optional[str], optional): Directory path for saving dumps. Defaults to './dumps'.
         """
         self.web_client = web_client
         self.llm_api_key = llm_api_key
@@ -84,6 +87,13 @@ class DeepResearch:
         self.max_depth = max_depth
         self.time_limit_seconds = time_limit_minutes * 60
         self.max_concurrent_requests = max_concurrent_requests
+
+        # Dump files configuration
+        self.dump_files = dump_files
+        self.dump_files_path = dump_files_path
+        self.dump_manager = None
+        if dump_files and dump_files_path:
+            self.dump_manager = DumpManager(dump_dir=dump_files_path, format="yaml")
 
         # GraphRAG initialization
         self.enable_graphrag = enable_graphrag
@@ -114,14 +124,11 @@ class DeepResearch:
             # Configure models to use OpenAI
             litellm.set_verbose = False  # Disable verbose output
 
-            # Set model configuration for both research and reasoning models
-            if "gpt" in self.research_model.lower():
-                # If model is a GPT model, use openai provider
-                self.research_model = f"openai/{self.research_model}"
-
-            if "gpt" in self.reasoning_model.lower():
-                # If model is a GPT model, use openai provider
-                self.reasoning_model = f"openai/{self.reasoning_model}"
+        # Initialize query generator
+        self.query_generator = QueryGenerator(
+            reasoning_model=reasoning_model,
+            base_url=base_url,
+        )
 
     # ============= GRAPHRAG INTEGRATION =============
 
@@ -179,7 +186,7 @@ class DeepResearch:
                     graph.add_relationship(relationship)
 
             except Exception as e:
-                print(f"Error extracting from finding: {str(e)}")
+                logger.error(f"Error extracting from finding: {str(e)}")
                 continue
 
         if extracted_count > 0:
@@ -216,7 +223,7 @@ class DeepResearch:
             )
             return context
         except Exception as e:
-            print(f"Error retrieving graph context: {str(e)}")
+            logger.error(f"Error retrieving graph context: {str(e)}")
             return ""
 
     def _save_knowledge_graph(self, session_id: str) -> None:
@@ -232,7 +239,7 @@ class DeepResearch:
         try:
             self.graphrag_manager.save_graph(session_id)
         except Exception as e:
-            print(f"Error saving knowledge graph: {str(e)}")
+            logger.error(f"Error saving knowledge graph: {str(e)}")
 
     def load_knowledge_graph(self, session_id: str) -> bool:
         """
@@ -261,7 +268,7 @@ class DeepResearch:
                 return True
             return False
         except Exception as e:
-            print(f"Error loading knowledge graph: {str(e)}")
+            logger.error(f"Error loading knowledge graph: {str(e)}")
             return False
 
     # ============= SOURCE QUALITY ASSESSMENT =============
@@ -278,182 +285,9 @@ class DeepResearch:
         Returns:
             SourceQualityMetrics with quality scores.
         """
-        # Domain authority (based on TLD and known authoritative domains)
-        domain_authority = self._calculate_domain_authority(str(search_item.url))
+        return await SourceQualityAssessor.assess_source_quality(search_item)
 
-        # Recency score (based on date if available)
-        recency_score = self._calculate_recency_score(search_item.date)
-
-        # Content depth (based on description length and relevance)
-        content_depth = self._calculate_content_depth(search_item)
-
-        # Cross-reference score (will be updated as we find multiple sources)
-        cross_reference_score = 0.0
-
-        return SourceQualityMetrics(
-            domain_authority=domain_authority,
-            recency_score=recency_score,
-            content_depth=content_depth,
-            citation_count=0,
-            cross_reference_score=cross_reference_score,
-        )
-
-    def _calculate_domain_authority(self, url: str) -> float:
-        """Calculate domain authority score based on the URL."""
-        try:
-            parsed = urlparse(url)
-            domain = parsed.netloc.lower()
-
-            # High authority domains
-            high_authority = [
-                "edu",
-                "gov",
-                "arxiv.org",
-                "scholar.google",
-                "ieee.org",
-                "acm.org",
-                "nature.com",
-                "science.org",
-                "nih.gov",
-                "who.int",
-            ]
-
-            # Medium authority domains
-            medium_authority = [
-                "org",
-                "wikipedia.org",
-                "medium.com",
-                "stackoverflow.com",
-                "github.com",
-            ]
-
-            # Check for high authority
-            for auth_domain in high_authority:
-                if auth_domain in domain:
-                    return 0.9
-
-            # Check for medium authority
-            for auth_domain in medium_authority:
-                if auth_domain in domain:
-                    return 0.7
-
-            # Default score for other domains
-            return 0.5
-        except Exception:
-            return 0.5
-
-    def _calculate_recency_score(self, date_str: str) -> float:
-        """Calculate recency score based on publication date."""
-        if not date_str:
-            return 0.5  # No date information
-
-        try:
-            # Try to parse various date formats
-            from dateutil import parser
-
-            date = parser.parse(date_str)
-            now = datetime.now()
-            days_old = (now - date).days
-
-            # Score based on age
-            if days_old < 30:  # Less than a month
-                return 1.0
-            elif days_old < 90:  # Less than 3 months
-                return 0.9
-            elif days_old < 180:  # Less than 6 months
-                return 0.8
-            elif days_old < 365:  # Less than a year
-                return 0.7
-            elif days_old < 730:  # Less than 2 years
-                return 0.6
-            else:
-                return 0.5
-        except Exception:
-            return 0.5  # Can't parse date
-
-    def _calculate_content_depth(self, search_item: WebSearchItem) -> float:
-        """Calculate content depth score based on description."""
-        description = search_item.description
-        if not description:
-            return 0.5
-
-        # Longer descriptions generally indicate more detailed content
-        length = len(description)
-        if length > 300:
-            return 0.9
-        elif length > 200:
-            return 0.8
-        elif length > 100:
-            return 0.7
-        else:
-            return 0.6
-
-    def _calculate_diversity_score(
-        self, result: WebSearchItem, existing_results: List[Tuple]
-    ) -> float:
-        """
-        Calculate diversity bonus for selecting sources from different domains.
-
-        Args:
-            result: The search result to evaluate.
-            existing_results: List of already selected (result, score, quality) tuples.
-
-        Returns:
-            Diversity score between 0.0 and 1.0.
-        """
-        try:
-            parsed = urlparse(str(result.url))
-            domain = parsed.netloc.lower()
-
-            # Count how many existing results are from the same domain
-            same_domain_count = 0
-            for existing_result, _, _ in existing_results:
-                existing_domain = urlparse(str(existing_result.url)).netloc.lower()
-                if domain == existing_domain:
-                    same_domain_count += 1
-
-            # Penalize multiple sources from same domain
-            if same_domain_count == 0:
-                return 1.0
-            elif same_domain_count == 1:
-                return 0.7
-            elif same_domain_count == 2:
-                return 0.4
-            else:
-                return 0.2
-        except Exception:
-            return 0.5
-
-    def _calculate_gap_relevance(
-        self, result: WebSearchItem, priority_gaps: List[str]
-    ) -> float:
-        """
-        Calculate how relevant a result is to current knowledge gaps.
-
-        Args:
-            result: The search result to evaluate.
-            priority_gaps: List of priority knowledge gaps.
-
-        Returns:
-            Relevance score between 0.0 and 1.0.
-        """
-        if not priority_gaps:
-            return 1.0  # No gaps specified, all results equally relevant
-
-        # Check if title or description contains keywords from gaps
-        text = (result.title + " " + result.description).lower()
-
-        relevance_scores = []
-        for gap in priority_gaps:
-            gap_keywords = gap.lower().split()
-            matches = sum(1 for keyword in gap_keywords if keyword in text)
-            score = min(matches / len(gap_keywords), 1.0) if gap_keywords else 0.0
-            relevance_scores.append(score)
-
-        # Return the highest relevance score
-        return max(relevance_scores) if relevance_scores else 0.5
-
-    # ============= ADAPTIVE QUERY GENERATION =============
+    # ============= ACTIVITY AND SOURCE TRACKING =============
 
     async def _add_activity(
         self, type_: ActivityType, status: ActivityStatus, message: str, depth: int
@@ -530,265 +364,9 @@ class DeepResearch:
         Returns:
             List of search queries appropriate for the current phase.
         """
-        if state.current_phase == ResearchPhase.EXPLORATION:
-            return await self._generate_exploratory_queries(topic)
-        elif state.current_phase == ResearchPhase.DEEPENING:
-            return await self._generate_deepening_queries(
-                topic, state.priority_gaps[:3]
-            )
-        elif state.current_phase == ResearchPhase.VERIFICATION:
-            return await self._generate_verification_queries(
-                state.unconfirmed_claims[:5]
-            )
-        else:
-            # Fallback to basic query generation
-            return await self._generate_exploratory_queries(topic)
-
-    async def _generate_exploratory_queries(self, topic: str) -> List[SearchQuery]:
-        """
-        Generate broad exploratory queries for initial research phase.
-
-        Args:
-            topic: The main research topic.
-
-        Returns:
-            List of 3-5 broad search queries.
-        """
-        try:
-            prompt = f"""You are an expert research assistant conducting initial exploration of a topic.
-
-<topic>
-{topic}
-</topic>
-
-<task>
-Generate 3-5 exploratory search queries that provide comprehensive coverage from different angles.
-These queries should help establish a foundational understanding of the topic.
-</task>
-
-<guidelines>
-- Generate exactly 3-5 queries
-- Cover different aspects: fundamentals, current state, applications, challenges, future trends
-- Each query should be specific but broad enough to gather substantial information
-- Optimize for search engines (clear, concise, keyword-rich)
-- Include technical terms where appropriate
-- Prioritize authoritative sources
-</guidelines>
-
-<response_format>
-Respond with a JSON array:
-[
-  {{
-    "query": "search query text",
-    "relevance": 0.0-1.0,
-    "explanation": "what aspect this covers"
-  }}
-]
-</response_format>
-"""
-
-            model_temp = 1 if "o3" in self.reasoning_model.lower() else 0
-            response = await litellm.acompletion(
-                model=self.reasoning_model,
-                messages=[{"role": "user", "content": prompt}],
-                temperature=model_temp,
-                drop_params=True,
-                base_url=self.base_url,
-            )
-
-            result_text = response.choices[0].message.content
-            parsed = json.loads(result_text)
-            search_queries = [
-                SearchQuery(
-                    query=q.get("query", ""),
-                    relevance=q.get("relevance", 1.0),
-                    explanation=q.get("explanation", ""),
-                    phase="exploration",
-                )
-                for q in parsed
-            ]
-
-            if len(search_queries) > 5:
-                search_queries = search_queries[:5]
-            elif not search_queries:
-                search_queries = [SearchQuery(query=topic, phase="exploration")]
-
-            return search_queries
-        except Exception as e:
-            print(f"Error generating exploratory queries: {str(e)}")
-            return [SearchQuery(query=topic, phase="exploration")]
-
-    async def _generate_deepening_queries(
-        self, topic: str, priority_gaps: List[str]
-    ) -> List[SearchQuery]:
-        """
-        Generate focused queries to address specific knowledge gaps.
-
-        Args:
-            topic: The main research topic.
-            priority_gaps: List of top priority knowledge gaps.
-
-        Returns:
-            List of targeted search queries.
-        """
-        if not priority_gaps:
-            return [SearchQuery(query=topic, phase="deepening")]
-
-        try:
-            gaps_text = "\n".join([f"- {gap}" for gap in priority_gaps])
-            prompt = f"""You are an expert research assistant conducting deep investigation.
-
-<topic>
-{topic}
-</topic>
-
-<knowledge_gaps>
-{gaps_text}
-</knowledge_gaps>
-
-<task>
-Generate 2-4 highly targeted search queries to address these specific knowledge gaps.
-Each query should focus on filling one specific gap with detailed, technical information.
-</task>
-
-<guidelines>
-- Generate 2-4 queries maximum (one or two per major gap)
-- Be very specific and technical
-- Target authoritative, detailed sources
-- Include precise terminology
-- Formulate to find data, specifications, implementations, or expert analysis
-</guidelines>
-
-<response_format>
-Respond with a JSON array:
-[
-  {{
-    "query": "specific targeted search query",
-    "relevance": 0.0-1.0,
-    "explanation": "which gap this addresses"
-  }}
-]
-</response_format>
-"""
-
-            model_temp = 1 if "o3" in self.reasoning_model.lower() else 0
-            response = await litellm.acompletion(
-                model=self.reasoning_model,
-                messages=[{"role": "user", "content": prompt}],
-                temperature=model_temp,
-                drop_params=True,
-                base_url=self.base_url,
-            )
-
-            result_text = response.choices[0].message.content
-            parsed = json.loads(result_text)
-            search_queries = [
-                SearchQuery(
-                    query=q.get("query", ""),
-                    relevance=q.get("relevance", 1.0),
-                    explanation=q.get("explanation", ""),
-                    phase="deepening",
-                )
-                for q in parsed
-            ]
-
-            if len(search_queries) > 4:
-                search_queries = search_queries[:4]
-
-            return (
-                search_queries
-                if search_queries
-                else [SearchQuery(query=priority_gaps[0], phase="deepening")]
-            )
-        except Exception as e:
-            print(f"Error generating deepening queries: {str(e)}")
-            return [SearchQuery(query=priority_gaps[0], phase="deepening")]
-
-    async def _generate_verification_queries(
-        self, unconfirmed_claims: List[UnconfirmedClaim]
-    ) -> List[SearchQuery]:
-        """
-        Generate queries to verify or refute unconfirmed claims.
-
-        Args:
-            unconfirmed_claims: List of claims that need verification.
-
-        Returns:
-            List of verification-focused queries.
-        """
-        if not unconfirmed_claims:
-            return []
-
-        try:
-            claims_text = "\n".join(
-                [
-                    f"- {claim.claim} (from {claim.source})"
-                    for claim in unconfirmed_claims[:3]
-                ]
-            )
-            prompt = f"""You are an expert fact-checker tasked with verifying claims.
-
-<claims_to_verify>
-{claims_text}
-</claims_to_verify>
-
-<task>
-Generate 2-3 search queries designed to find corroborating or contradicting evidence.
-Focus on finding authoritative, credible sources that can confirm or refute these claims.
-</task>
-
-<guidelines>
-- Generate 2-3 queries
-- Formulate queries to find independent verification
-- Target authoritative sources (academic, government, established institutions)
-- Include specific facts or figures mentioned in claims
-- Look for both supporting and contradicting evidence
-</guidelines>
-
-<response_format>
-Respond with a JSON array:
-[
-  {{
-    "query": "verification search query",
-    "relevance": 0.0-1.0,
-    "explanation": "which claim this verifies"
-  }}
-]
-</response_format>
-"""
-
-            model_temp = 1 if "o3" in self.reasoning_model.lower() else 0
-            response = await litellm.acompletion(
-                model=self.reasoning_model,
-                messages=[{"role": "user", "content": prompt}],
-                temperature=model_temp,
-                drop_params=True,
-                base_url=self.base_url,
-            )
-
-            result_text = response.choices[0].message.content
-            parsed = json.loads(result_text)
-            search_queries = [
-                SearchQuery(
-                    query=q.get("query", ""),
-                    relevance=q.get("relevance", 1.0),
-                    explanation=q.get("explanation", ""),
-                    phase="verification",
-                )
-                for q in parsed
-            ]
-
-            return search_queries[:3] if search_queries else []
-        except Exception as e:
-            print(f"Error generating verification queries: {str(e)}")
-            return []
-
-    async def _generate_search_queries(self, topic: str) -> List[SearchQuery]:
-        """
-        Legacy method for backward compatibility.
-        Generates exploratory queries by default.
-        """
-        return await self._generate_exploratory_queries(topic)
+        return await self.query_generator.generate_adaptive_queries(
+            topic, state, context
+        )
 
     # ============= INCREMENTAL KNOWLEDGE BUILDING =============
 
@@ -827,51 +405,13 @@ Respond with a JSON array:
             )
             new_findings_text = json.dumps(new_findings, indent=2)
 
-            prompt = f"""You are an expert research analyst evaluating new findings in context of existing knowledge.
-
-<topic>
-{topic}
-</topic>
-
-<existing_confirmed_facts>
-{confirmed_facts_text}
-</existing_confirmed_facts>
-
-<existing_unconfirmed_claims>
-{unconfirmed_text}
-</existing_unconfirmed_claims>
-
-<new_findings>
-{new_findings_text}
-</new_findings>
-
-<tasks>
-1. Identify which new findings CONFIRM existing unconfirmed claims (multiple independent sources)
-2. Identify NEW claims from the findings that need verification
-3. Identify CONTRADICTIONS between sources (conflicting information)
-4. Update knowledge gaps - what critical information is still missing?
-5. Determine if we have sufficient information or need deeper investigation
-</tasks>
-
-<response_format>
-Respond with a JSON object:
-{{
-  "confirmed_facts": [
-    {{"claim": "fact now confirmed", "sources": ["url1", "url2"], "confidence": 0.0-1.0}}
-  ],
-  "new_unconfirmed": [
-    {{"claim": "new claim", "source": "url", "needs_verification": true}}
-  ],
-  "contradictions": [
-    {{"topic": "what contradicts", "claim_a": "claim from source A", "source_a": "url", "claim_b": "conflicting claim", "source_b": "url"}}
-  ],
-  "knowledge_gaps": ["specific gap 1", "specific gap 2"],
-  "should_continue": true/false,
-  "recommended_phase": "exploration|deepening|verification|synthesis",
-  "summary": "brief summary of new insights"
-}}
-</response_format>
-"""
+            prompt = render_prompt(
+                "incremental_analysis",
+                topic=topic,
+                confirmed_facts_text=confirmed_facts_text,
+                unconfirmed_text=unconfirmed_text,
+                new_findings_text=new_findings_text,
+            )
 
             model_temp = 1 if "o3" in self.reasoning_model.lower() else 0
             response = await litellm.acompletion(
@@ -880,12 +420,13 @@ Respond with a JSON object:
                 temperature=model_temp,
                 drop_params=True,
                 base_url=self.base_url,
+                stream=False,  # Explicitly disable streaming for OpenRouter compatibility
             )
 
             result_text = response.choices[0].message.content
             return json.loads(result_text)
         except Exception as e:
-            print(f"Incremental analysis error: {str(e)}")
+            logger.error(f"Incremental analysis error: {str(e)}")
             return None
 
     async def _update_research_state(
@@ -957,7 +498,7 @@ Respond with a JSON object:
             return
 
         # Generate verification queries
-        verification_queries = await self._generate_verification_queries(
+        verification_queries = await self.query_generator.generate_verification_queries(
             state.unconfirmed_claims[:3]  # Top 3 unconfirmed claims
         )
 
@@ -1045,10 +586,14 @@ Respond with a JSON object:
             quality = await self._assess_source_quality(result)
 
             # Calculate diversity bonus (prefer different domains)
-            diversity_bonus = self._calculate_diversity_score(result, scored_results)
+            diversity_bonus = SourceQualityAssessor.calculate_diversity_score(
+                result, scored_results
+            )
 
             # Calculate relevance to current gaps
-            gap_relevance = self._calculate_gap_relevance(result, state.priority_gaps)
+            gap_relevance = SourceQualityAssessor.calculate_gap_relevance(
+                result, state.priority_gaps
+            )
 
             # Calculate final score with weighted components
             final_score = (
@@ -1161,7 +706,7 @@ Respond with a JSON object:
             )
 
         # Extract from all URLs concurrently
-        prompt = f"Extract key information about {topic}. Focus on facts, data, and expert opinions. Analysis should be full of details and very comprehensive."
+        prompt = render_prompt("url_extraction", topic=topic)
         extract_result = await self.web_client.extract(urls=urls, prompt=prompt)
 
         results = []
@@ -1276,50 +821,6 @@ Respond with a JSON object:
 
         return 0.5  # Default moderate novelty
 
-    async def _extract_research_goals(self, topic: str) -> List[str]:
-        """
-        Extract specific research goals from the topic using LLM.
-
-        Args:
-            topic: The research topic.
-
-        Returns:
-            List of specific research goals.
-        """
-        try:
-            prompt = f"""Given this research topic, identify 3-5 specific research goals or questions that should be answered.
-
-<topic>
-{topic}
-</topic>
-
-<task>
-Break down the topic into specific, answerable research goals.
-Each goal should be a clear question or objective that can be satisfied with concrete information.
-</task>
-
-<response_format>
-Respond with a JSON array of strings:
-["Goal 1: specific question", "Goal 2: specific question", ...]
-</response_format>
-"""
-
-            model_temp = 1 if "o3" in self.reasoning_model.lower() else 0
-            response = await litellm.acompletion(
-                model=self.reasoning_model,
-                messages=[{"role": "user", "content": prompt}],
-                temperature=model_temp,
-                drop_params=True,
-                base_url=self.base_url,
-            )
-
-            result_text = response.choices[0].message.content
-            goals = json.loads(result_text)
-            return goals if isinstance(goals, list) else []
-        except Exception as e:
-            print(f"Error extracting research goals: {str(e)}")
-            return []
-
     # ============= MAIN RESEARCH METHOD =============
 
     async def research(
@@ -1342,7 +843,7 @@ Respond with a JSON array of strings:
         )
 
         # Extract research goals from topic
-        research_goals = await self._extract_research_goals(topic)
+        research_goals = await self.query_generator.extract_research_goals(topic)
 
         # Initialize GraphRAG if enabled
         if self.enable_graphrag and self.graphrag_manager:
@@ -1641,62 +1142,19 @@ Respond with a JSON array of strings:
             #    </recommendation_guidelines>
             # </required_elements>
 
-            synthesis_prompt = f"""You are an expert academic researcher creating a comprehensive, structured analysis of: {topic}
-
-            <evidence_and_primary_sources>
-            {findings_text}
-            </evidence_and_primary_sources>
-            
-            <interim_summaries>
-            {summaries_text}
-            </interim_summaries>
-            
-            <confirmed_facts>
-            {confirmed_facts_text if confirmed_facts_text else "No facts confirmed across multiple sources."}
-            </confirmed_facts>
-            
-            <contradictions_and_uncertainties>
-            {contradictions_text if contradictions_text else "No major contradictions found."}
-            </contradictions_and_uncertainties>
-            
-            <research_metadata>
-            {quality_summary}
-            </research_metadata>
-            
-            <task_description>
-            Create a thorough, detailed analysis that synthesizes all information into a cohesive, authoritative report. 
-            This should be your most comprehensive, detailed work - structured with clear sections and subsections.
-            
-            IMPORTANT: 
-            - Give higher weight to confirmed facts (those verified across multiple sources)
-            - Explicitly address any contradictions found
-            - Note the confidence level for claims based on source agreement
-            - Distinguish between well-established facts and emerging information
-            </task_description>
-            
-            <formatting_guidelines>
-            - Use "--------------------" as section dividers
-            - Create a logical hierarchy with numbered sections and subsections
-            - Use bullet points for lists of related items
-            - Include direct quotations where particularly insightful
-            - Highlight key terms or concepts in context
-            - Mark confidence levels where appropriate (HIGH, MEDIUM, LOW)
-            </formatting_guidelines>
-            
-            <scholarly_standards>
-            - Maintain a formal, analytical tone
-            - Present balanced coverage of conflicting viewpoints
-            - Achieve depth rather than breadth in analysis
-            - Prioritize precision and accuracy in all technical explanations
-            - Connect specific findings to broader theoretical frameworks
-            - Synthesize information across sources rather than summarizing each separately
-            - Explicitly note areas of uncertainty or disagreement
-            </scholarly_standards>
-            
-            <output_quality>
-            Your analysis should be the definitive resource on this topic - comprehensive, authoritative, and insightful.
-            Include a section on limitations and areas requiring further research based on identified gaps.
-            </output_quality>"""
+            synthesis_prompt = render_prompt(
+                "final_synthesis",
+                topic=topic,
+                findings_text=findings_text,
+                summaries_text=summaries_text,
+                confirmed_facts_text=confirmed_facts_text
+                if confirmed_facts_text
+                else "No facts confirmed across multiple sources.",
+                contradictions_text=contradictions_text
+                if contradictions_text
+                else "No major contradictions found.",
+                quality_summary=quality_summary,
+            )
 
             # For O-series models, we need to use temperature=1 (only supported value)
             model_temp = 1 if "o3" in self.reasoning_model.lower() else temperature
@@ -1764,7 +1222,7 @@ Respond with a JSON array of strings:
                 for q in state.search_queries
             ]
 
-            return ResearchResult(
+            result = ResearchResult(
                 success=True,
                 data={
                     "findings": state.findings,
@@ -1782,6 +1240,12 @@ Respond with a JSON array of strings:
                     "knowledge_graph": graphrag_data,
                 },
             )
+
+            # Save dump if enabled
+            if self.dump_files:
+                self._save_dump(topic, session_id, result)
+
+            return result
 
         except Exception as e:
             await self._add_activity(
@@ -1820,3 +1284,105 @@ Respond with a JSON array of strings:
                     "sources_consulted": len(state.visited_urls),
                 },
             )
+
+    # ============= DUMP MANAGEMENT =============
+
+    def _save_dump(self, topic: str, session_id: str, result: ResearchResult) -> None:
+        """
+        Save research result to a dump file.
+
+        Args:
+            topic: Research topic.
+            session_id: Session identifier.
+            result: Research result to save.
+        """
+        if not self.dump_manager:
+            return
+
+        try:
+            # Prepare data and metadata
+            data = {
+                "success": result.success,
+                "data": result.data,
+                "error": result.error,
+            }
+            metadata = {"topic": topic}
+
+            self.dump_manager.save(session_id, data, metadata)
+
+        except Exception as e:
+            logger.warning(f"Failed to save dump: {str(e)}")
+
+    def load_dump(self, session_id: str) -> Optional[ResearchResult]:
+        """
+        Load a research result from a dump file (supports both YAML and JSON).
+
+        Args:
+            session_id: Session identifier or filename.
+
+        Returns:
+            ResearchResult if found, None otherwise.
+        """
+        if not self.dump_manager:
+            self.dump_manager = DumpManager(dump_dir=self.dump_files_path)
+
+        try:
+            dump_data = self.dump_manager.load(session_id)
+
+            if dump_data is None:
+                return None
+
+            # Reconstruct ResearchResult
+            result = ResearchResult(
+                success=dump_data.get("success", False),
+                data=dump_data.get("data", {}),
+                error=dump_data.get("error"),
+            )
+
+            return result
+
+        except Exception as e:
+            logger.error(f"Error loading dump: {str(e)}")
+            return None
+
+    def list_dumps(self) -> List[str]:
+        """
+        List all available dump files (both YAML and JSON).
+
+        Returns:
+            List of session IDs (filenames without extension).
+        """
+        if not self.dump_manager:
+            self.dump_manager = DumpManager(dump_dir=self.dump_files_path)
+
+        return self.dump_manager.list()
+
+    def delete_dump(self, session_id: str) -> bool:
+        """
+        Delete a dump file.
+
+        Args:
+            session_id: Session identifier or filename.
+
+        Returns:
+            True if deleted successfully, False otherwise.
+        """
+        if not self.dump_manager:
+            self.dump_manager = DumpManager(dump_dir=self.dump_files_path)
+
+        return self.dump_manager.delete(session_id)
+
+    def get_dump_metadata(self, session_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Get metadata from a dump file without loading all data.
+
+        Args:
+            session_id: Session identifier or filename.
+
+        Returns:
+            Metadata dictionary or None if not found.
+        """
+        if not self.dump_manager:
+            self.dump_manager = DumpManager(dump_dir=self.dump_files_path)
+
+        return self.dump_manager.get_metadata(session_id)

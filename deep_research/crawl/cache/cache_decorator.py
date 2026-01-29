@@ -1,5 +1,5 @@
 """
-Cache decorator for Docling client functions.
+Cache decorator for web client functions.
 """
 
 import datetime
@@ -68,7 +68,11 @@ def _generate_cache_key(
         args_list = []
         for arg in args:
             # Skip self references (client instances)
-            if arg.__class__.__name__ == "DoclingClient":
+            if arg.__class__.__name__ in [
+                "MarkItDownClient",
+                "FirecrawlClient",
+                "BaseWebClient",
+            ]:
                 continue
             elif isinstance(arg, BaseModel):
                 args_list.append(arg.model_dump())

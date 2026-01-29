@@ -7,6 +7,7 @@ from typing import Dict, List, Optional
 
 from duckduckgo_search import DDGS
 
+from ...utils import logger
 from ...models import SearchResult, WebSearchItem
 from .base_search import BaseSearchClient
 
@@ -63,7 +64,7 @@ class DuckDuckGoSearchClient(BaseSearchClient):
                         )
                         results_data.extend(main_results)
                     except Exception as e:
-                        print(f"Error in DuckDuckGo search: {str(e)}")
+                        logger.error(f"Error in DuckDuckGo search: {str(e)}")
                         # Create some mock results if real search fails
                         search_terms = query.replace(" ", "+")
                         results_data.append(
@@ -156,7 +157,7 @@ class DuckDuckGoSearchClient(BaseSearchClient):
                     formatted_results.append(search_item)
                 except Exception as e:
                     # Skip invalid results
-                    print(f"Error processing DDG result: {str(e)}")
+                    logger.error(f"Error processing DDG result: {str(e)}")
                     continue
 
             return SearchResult(success=True, data=formatted_results)

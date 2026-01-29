@@ -1,18 +1,18 @@
 """
-Example showing how to use the cache with the Docling client.
+Example showing how to use the cache with the MarkItDown client.
 """
 
 import asyncio
 import os
 import time
 
-from deep_research.utils.cache import (
+from deep_research.crawl.cache import (
     CacheConfig,
     clear_cache,
     clear_expired_cache,
     init_cache,
 )
-from deep_research.utils.docling_client import DoclingClient
+from deep_research.crawl.markitdown_client import MarkItDownClient
 
 
 async def main():
@@ -24,15 +24,13 @@ async def main():
     cache_config = CacheConfig(
         enabled=True,
         ttl_seconds=3600,  # Cache data for 1 hour
-        db_url="sqlite:///docling_cache.db",
+        db_url="sqlite:///research_cache.db",
         create_tables=True,
     )
 
-    # Initialize the DoclingClient with caching enabled
-    client = DoclingClient(
-        api_key="demo",
+    # Initialize the MarkItDownClient with caching enabled
+    client = MarkItDownClient(
         brave_api_key=brave_api_key,
-        use_brave_search=brave_api_key is not None,
         cache_config=cache_config,
     )
 

@@ -8,7 +8,7 @@ from typing import List, Optional
 
 from pydantic import BaseModel
 
-from deep_research.utils.cache import CacheConfig, cache, init_cache
+from deep_research.crawl.cache import CacheConfig, cache, init_cache
 
 
 class SearchParams(BaseModel):
@@ -142,13 +142,13 @@ async def main():
     init_cache(CacheConfig(enabled=True))
 
     # Show how to clear specific function cache
-    from deep_research.utils.cache import clear_cache
+    from deep_research.crawl.cache import clear_cache
 
     clear_cache(function_name="MockClient.search")
     print("  Cleared search cache")
 
     # Clear all expired cache
-    from deep_research.utils.cache import clear_expired_cache
+    from deep_research.crawl.cache import clear_expired_cache
 
     clear_expired_cache()
     print("  Cleared expired cache entries")

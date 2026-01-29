@@ -12,7 +12,7 @@ from unittest.mock import MagicMock, patch
 from sqlmodel import Session, select
 
 from deep_research.models import ExtractResult, SearchResult
-from deep_research.utils.cache import (
+from deep_research.crawl.cache import (
     CacheConfig,
     ExtractCache,
     SearchCache,
@@ -20,7 +20,7 @@ from deep_research.utils.cache import (
     cached_search,
     init_cache,
 )
-from deep_research.utils.cache.cache_models import get_engine
+from deep_research.crawl.cache.cache_models import get_engine
 
 
 class TestCache(unittest.TestCase):
@@ -105,8 +105,8 @@ class TestCache(unittest.TestCase):
             self.assertEqual(result.url, "https://example.com")
             self.assertEqual(result.prompt, "test prompt")
 
-    @patch("deep_research.utils.cache.cache_decorator._serialize_search_result")
-    @patch("deep_research.utils.cache.cache_decorator._deserialize_search_result")
+    @patch("deep_research.crawl.cache.cache_decorator._serialize_search_result")
+    @patch("deep_research.crawl.cache.cache_decorator._deserialize_search_result")
     def test_cached_search_decorator(self, mock_deserialize, mock_serialize):
         """Test the cached_search decorator."""
         # Set up the mocks
@@ -144,8 +144,8 @@ class TestCache(unittest.TestCase):
         # Run the async test
         asyncio.run(run_test())
 
-    @patch("deep_research.utils.cache.cache_decorator._serialize_extract_result")
-    @patch("deep_research.utils.cache.cache_decorator._deserialize_extract_result")
+    @patch("deep_research.crawl.cache.cache_decorator._serialize_extract_result")
+    @patch("deep_research.crawl.cache.cache_decorator._deserialize_extract_result")
     def test_cached_extract_decorator(self, mock_deserialize, mock_serialize):
         """Test the cached_extract decorator."""
         # Set up the mocks

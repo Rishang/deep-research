@@ -1,0 +1,436 @@
+# Deep Research SDK - Prompts Configuration
+# This file contains all prompts used throughout the research process
+# You can customize these prompts to adjust the research behavior
+
+# ============================================
+# QUERY GENERATION PROMPTS
+# ============================================
+
+exploratory_queries:
+  template: |
+    You are an expert research assistant conducting initial exploration of a topic.
+
+    <topic>
+    {{ topic }}
+    </topic>
+
+    <task>
+    Generate 3-5 exploratory search queries that provide comprehensive coverage from different angles.
+    These queries should help establish a foundational understanding of the topic.
+    </task>
+
+    <guidelines>
+    - Generate exactly 3-5 queries
+    - Cover different aspects: fundamentals, current state, applications, challenges, future trends
+    - Each query should be specific but broad enough to gather substantial information
+    - Optimize for search engines (clear, concise, keyword-rich)
+    - Include technical terms where appropriate
+    - Prioritize authoritative sources
+    </guidelines>
+
+    <response_format>
+    Respond with a JSON array:
+    [
+      {
+        "query": "search query text",
+        "relevance": 0.0-1.0,
+        "explanation": "what aspect this covers"
+      }
+    ]
+    </response_format>
+
+deepening_queries:
+  template: |
+    You are an expert research assistant conducting deep investigation.
+
+    <topic>
+    {{ topic }}
+    </topic>
+
+    <knowledge_gaps>
+    {{ gaps_text }}
+    </knowledge_gaps>
+
+    <task>
+    Generate 2-4 highly targeted search queries to address these specific knowledge gaps.
+    Each query should focus on filling one specific gap with detailed, technical information.
+    </task>
+
+    <guidelines>
+    - Generate 2-4 queries maximum (one or two per major gap)
+    - Be very specific and technical
+    - Target authoritative, detailed sources
+    - Include precise terminology
+    - Formulate to find data, specifications, implementations, or expert analysis
+    </guidelines>
+
+    <response_format>
+    Respond with a JSON array:
+    [
+      {
+        "query": "specific targeted search query",
+        "relevance": 0.0-1.0,
+        "explanation": "which gap this addresses"
+      }
+    ]
+    </response_format>
+
+verification_queries:
+  template: |
+    You are an expert fact-checker tasked with verifying claims.
+
+    <claims_to_verify>
+    {{ claims_text }}
+    </claims_to_verify>
+
+    <task>
+    Generate 2-3 search queries designed to find corroborating or contradicting evidence.
+    Focus on finding authoritative, credible sources that can confirm or refute these claims.
+    </task>
+
+    <guidelines>
+    - Generate 2-3 queries
+    - Formulate queries to find independent verification
+    - Target authoritative sources (academic, government, established institutions)
+    - Include specific facts or figures mentioned in claims
+    - Look for both supporting and contradicting evidence
+    </guidelines>
+
+    <response_format>
+    Respond with a JSON array:
+    [
+      {
+        "query": "verification search query",
+        "relevance": 0.0-1.0,
+        "explanation": "which claim this verifies"
+      }
+    ]
+    </response_format>
+
+# ============================================
+# ANALYSIS PROMPTS
+# ============================================
+
+incremental_analysis:
+  template: |
+    You are an expert research analyst evaluating new findings in context of existing knowledge.
+
+    <topic>
+    {{ topic }}
+    </topic>
+
+    <existing_confirmed_facts>
+    {{ confirmed_facts_text }}
+    </existing_confirmed_facts>
+
+    <existing_unconfirmed_claims>
+    {{ unconfirmed_text }}
+    </existing_unconfirmed_claims>
+
+    <new_findings>
+    {{ new_findings_text }}
+    </new_findings>
+
+    <tasks>
+    1. Identify which new findings CONFIRM existing unconfirmed claims (multiple independent sources)
+    2. Identify NEW claims from the findings that need verification
+    3. Identify CONTRADICTIONS between sources (conflicting information)
+    4. Update knowledge gaps - what critical information is still missing?
+    5. Determine if we have sufficient information or need deeper investigation
+    </tasks>
+
+    <response_format>
+    Respond with a JSON object:
+    {
+      "confirmed_facts": [
+        {"claim": "fact now confirmed", "sources": ["url1", "url2"], "confidence": 0.0-1.0}
+      ],
+      "new_unconfirmed": [
+        {"claim": "new claim", "source": "url", "needs_verification": true}
+      ],
+      "contradictions": [
+        {"topic": "what contradicts", "claim_a": "claim from source A", "source_a": "url", "claim_b": "conflicting claim", "source_b": "url"}
+      ],
+      "knowledge_gaps": ["specific gap 1", "specific gap 2"],
+      "should_continue": true/false,
+      "recommended_phase": "exploration|deepening|verification|synthesis",
+      "summary": "brief summary of new insights"
+    }
+    </response_format>
+
+research_goals_extraction:
+  template: |
+    Given this research topic, identify 3-5 specific research goals or questions that should be answered.
+
+    <topic>
+    {{ topic }}
+    </topic>
+
+    <task>
+    Break down the topic into specific, answerable research goals.
+    Each goal should be a clear question or objective that can be satisfied with concrete information.
+    </task>
+
+    <response_format>
+    Respond with a JSON array of strings:
+    ["Goal 1: specific question", "Goal 2: specific question", ...]
+    </response_format>
+
+# ============================================
+# SYNTHESIS PROMPTS
+# ============================================
+
+final_synthesis:
+  template: |
+    You are an expert academic researcher creating a comprehensive, structured analysis of: {{ topic }}
+
+    <evidence_and_primary_sources>
+    {{ findings_text }}
+    </evidence_and_primary_sources>
+    
+    <interim_summaries>
+    {{ summaries_text }}
+    </interim_summaries>
+    
+    <confirmed_facts>
+    {{ confirmed_facts_text }}
+    </confirmed_facts>
+    
+    <contradictions_and_uncertainties>
+    {{ contradictions_text }}
+    </contradictions_and_uncertainties>
+    
+    <research_metadata>
+    {{ quality_summary }}
+    </research_metadata>
+    
+    <task_description>
+    Create a thorough, detailed analysis that synthesizes all information into a cohesive, authoritative report. 
+    This should be your most comprehensive, detailed work - structured with clear sections and subsections.
+    
+    IMPORTANT: 
+    - Give higher weight to confirmed facts (those verified across multiple sources)
+    - Explicitly address any contradictions found
+    - Note the confidence level for claims based on source agreement
+    - Distinguish between well-established facts and emerging information
+    </task_description>
+    
+    <formatting_guidelines>
+    - Use "--------------------" as section dividers
+    - Create a logical hierarchy with numbered sections and subsections
+    - Use bullet points for lists of related items
+    - Include direct quotations where particularly insightful
+    - Highlight key terms or concepts in context
+    - Mark confidence levels where appropriate (HIGH, MEDIUM, LOW)
+    </formatting_guidelines>
+    
+    <scholarly_standards>
+    - Maintain a formal, analytical tone
+    - Present balanced coverage of conflicting viewpoints
+    - Achieve depth rather than breadth in analysis
+    - Prioritize precision and accuracy in all technical explanations
+    - Connect specific findings to broader theoretical frameworks
+    - Synthesize information across sources rather than summarizing each separately
+    - Explicitly note areas of uncertainty or disagreement
+    </scholarly_standards>
+    
+    <output_quality>
+    Your analysis should be the definitive resource on this topic - comprehensive, authoritative, and insightful.
+    Include a section on limitations and areas requiring further research based on identified gaps.
+    </output_quality>
+
+# ============================================
+# GRAPHRAG PROMPTS
+# ============================================
+
+entity_extraction:
+  template: |
+    Extract entities and relationships from the following text.
+
+    <text>
+    {{ text }}
+    </text>
+
+    <source>
+    {{ source_url }}
+    </source>
+
+    <context>
+    This text is about: {{ context }}
+    </context>
+
+    Extract key entities (people, organizations, concepts, technologies, etc.) and relationships between them.
+
+    <response_format>
+    {
+      "entities": [
+        {
+          "name": "Entity name",
+          "type": "person|organization|concept|technology|location|event|other",
+          "description": "Brief description",
+          "properties": {"key": "value"}
+        }
+      ],
+      "relationships": [
+        {
+          "source": "Entity 1 name",
+          "target": "Entity 2 name",
+          "type": "related_to|part_of|causes|enables|supports|contradicts|etc",
+          "description": "How they're related"
+        }
+      ]
+    }
+    </response_format>
+
+    Important:
+    - Focus on factual, verifiable information
+    - Extract 5-15 key entities maximum
+    - Include only meaningful relationships
+    - Use exact entity names in relationships
+
+entity_enrichment:
+  template: |
+    Enrich the following entity with information from the additional text.
+
+    <entity>
+    Name: {{ entity_name }}
+    Type: {{ entity_type }}
+    Current Description: {{ entity_description }}
+    </entity>
+
+    <additional_text>
+    {{ additional_text }}
+    </additional_text>
+
+    Provide an enriched description and extract any additional properties.
+
+    <response_format>
+    {
+      "description": "Enhanced description",
+      "properties": {"key": "value"}
+    }
+    </response_format>
+
+entity_identification:
+  template: |
+    Given a query and a list of entities from a knowledge graph, identify the most relevant entities.
+
+    <query>
+    {{ query_text }}
+    </query>
+
+    <available_entities>
+    {{ entities_text }}
+    </available_entities>
+
+    <task>
+    Select the {{ max_results }} most relevant entities for answering this query.
+    Consider:
+    - Direct relevance to query keywords
+    - Semantic similarity to query intent
+    - Entity importance (PageRank)
+    - Potential to answer the query
+    </task>
+
+    <response_format>
+    {
+      "relevant_entity_ids": ["entity_id1", "entity_id2", ...]
+    }
+    </response_format>
+
+# ============================================
+# EXTRACTION PROMPTS
+# ============================================
+
+url_extraction:
+  template: "Extract key information about {{ topic }}. Focus on facts, data, and expert opinions. Analysis should be full of details and very comprehensive."
+
+# ============================================
+# SYNTHESIS PROMPTS
+# ============================================
+
+final_synthesis:
+  template: |
+    You are an expert academic researcher creating a comprehensive, structured analysis of: {{ topic }}
+
+    <evidence_and_primary_sources>
+    {{ findings_text }}
+    </evidence_and_primary_sources>
+    
+    <interim_summaries>
+    {{ summaries_text }}
+    </interim_summaries>
+    
+    <confirmed_facts>
+    {{ confirmed_facts_text if confirmed_facts_text else "No facts confirmed across multiple sources." }}
+    </confirmed_facts>
+    
+    <contradictions_and_uncertainties>
+    {{ contradictions_text if contradictions_text else "No major contradictions found." }}
+    </contradictions_and_uncertainties>
+    
+    <research_metadata>
+    {{ quality_summary }}
+    </research_metadata>
+    
+    <task_description>
+    Create a thorough, detailed analysis that synthesizes all information into a cohesive, authoritative report. 
+    This should be your most comprehensive, detailed work - structured with clear sections and subsections.
+    
+    IMPORTANT: 
+    - Give higher weight to confirmed facts (those verified across multiple sources)
+    - Explicitly address any contradictions found
+    - Note the confidence level for claims based on source agreement
+    - Distinguish between well-established facts and emerging information
+    </task_description>
+    
+    <formatting_guidelines>
+    - Use "--------------------" as section dividers
+    - Create a logical hierarchy with numbered sections and subsections
+    - Use bullet points for lists of related items
+    - Include direct quotations where particularly insightful
+    - Highlight key terms or concepts in context
+    - Mark confidence levels where appropriate (HIGH, MEDIUM, LOW)
+    </formatting_guidelines>
+    
+    <scholarly_standards>
+    - Maintain a formal, analytical tone
+    - Present balanced coverage of conflicting viewpoints
+    - Achieve depth rather than breadth in analysis
+    - Prioritize precision and accuracy in all technical explanations
+    - Connect specific findings to broader theoretical frameworks
+    - Synthesize information across sources rather than summarizing each separately
+    - Explicitly note areas of uncertainty or disagreement
+    </scholarly_standards>
+    
+    <output_quality>
+    Your analysis should be the definitive resource on this topic - comprehensive, authoritative, and insightful.
+    Include a section on limitations and areas requiring further research based on identified gaps.
+    </output_quality>
+
+# ============================================
+# CUSTOMIZATION NOTES
+# ============================================
+# 
+# This file uses Jinja2 templating syntax for variable substitution.
+# Variables are replaced at runtime with actual values from the research process.
+#
+# Common variables:
+# - {{ topic }}: The main research topic
+# - {{ text }}: Content being analyzed
+# - {{ context }}: Additional context information
+# - {{ findings_text }}: Accumulated research findings
+# - {{ summaries_text }}: Interim research summaries
+# - {{ confirmed_facts_text }}: Facts confirmed across multiple sources
+# - {{ contradictions_text }}: Contradictions and uncertainties found
+# - {{ quality_summary }}: Research quality metadata and statistics
+# - {{ gaps_text }}: Identified knowledge gaps
+# - {{ claims_text }}: Claims that need verification
+# - {{ source_url }}: URL of the source being analyzed
+#
+# You can modify these prompts to:
+# - Change the tone and style of responses
+# - Add domain-specific instructions
+# - Adjust the level of detail required
+# - Modify output formats
+# - Add custom guidelines for your use case

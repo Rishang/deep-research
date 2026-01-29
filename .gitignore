@@ -179,3 +179,4 @@ temp/
 *.db
 tmp-*
 CLAUDE.local.md
+dumps/

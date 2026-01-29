@@ -1,24 +1,25 @@
 """
-Docling client for web scraping and information extraction.
+MarkItDown client for web scraping and information extraction.
 """
 
 import asyncio
 from typing import Dict, List, Optional, Union
 
-from docling.document_converter import DocumentConverter
+from markitdown import MarkItDown
 from pydantic import HttpUrl
 
 from ..models import ExtractResult, SearchResult, WebSearchItem
+from ..utils import logger
 from .base_client import BaseWebClient
 from .cache import CacheConfig, cache
-from .docling_client_models import ScrapeParams, SearchParams
+from .web_client_models import ScrapeParams, SearchParams
 from .web import BraveSearchClient, DuckDuckGoSearchClient
 
 
-class DoclingClient(BaseWebClient):
+class MarkItDownClient(BaseWebClient):
     """
-    A client for interacting with Docling for web scraping and search.
-    Implements the BaseWebClient interface using standard Docling library.
+    A client for interacting with MarkItDown for web scraping and search.
+    Implements the BaseWebClient interface using Microsoft's MarkItDown library.
     """
 
     def __init__(
@@ -29,7 +30,7 @@ class DoclingClient(BaseWebClient):
         page_content_max_chars: int = 8000,
     ):
         """
-        Initialize the Docling client.
+        Initialize the MarkItDown client.
 
         Args:
             brave_api_key (Optional[str], optional): Brave Search API key. Defaults to None.
@@ -42,7 +43,7 @@ class DoclingClient(BaseWebClient):
         """
         super().__init__(max_concurrent_requests, cache_config, page_content_max_chars)
 
-        self.client = DocumentConverter()  # Docling uses DocumentConverter
+        self.client = MarkItDown()  # MarkItDown client
 
         # Setup search providers
         self.use_brave_search = brave_api_key is not None
@@ -79,7 +80,9 @@ class DoclingClient(BaseWebClient):
                     if result.success and result.data and len(result.data) > 0:
                         return result
                 except Exception as e:
-                    print(f"Brave search failed, falling back to DuckDuckGo: {str(e)}")
+                    logger.warning(
+                        f"Brave search failed, falling back to DuckDuckGo: {str(e)}"
+                    )
 
             # Use DuckDuckGo search as first fallback
             if self.duckduckgo_search:
@@ -88,13 +91,13 @@ class DoclingClient(BaseWebClient):
                     if result.success and result.data and len(result.data) > 0:
                         return result
                 except Exception as e:
-                    print(
+                    logger.warning(
                         f"DuckDuckGo search failed, falling back to mock results: {str(e)}"
                     )
 
             # If we reach here, both search methods failed or returned no results
             # Use mocked search as last resort fallback
-            print(f"Using mock search results for query: {query}")
+            logger.info(f"Using mock search results for query: {query}")
 
             # Create a list of sample URLs related to the query as a last resort
             search_terms = query.replace(" ", "+")
@@ -203,15 +206,15 @@ class DoclingClient(BaseWebClient):
         """
         async with self.semaphore:  # Limit concurrent requests
             try:
-                # Use Docling DocumentConverter to extract content
+                # Use MarkItDown to extract content
                 loop = asyncio.get_event_loop()
-                # Convert the synchronous DocumentConverter.convert call to async
+                # Convert the synchronous MarkItDown.convert call to async
                 result = await loop.run_in_executor(
                     None, lambda: self.client.convert(url)
                 )
 
-                # Extract content as markdown
-                content = result.document.export_to_markdown()
+                # Extract content as markdown from the result
+                content = result.text_content
 
                 # Add prompt-based extraction here (in a real implementation, you might use an LLM)
                 # For now, we'll just return the content with the prompt as context
@@ -287,14 +290,14 @@ class DoclingClient(BaseWebClient):
         async def _scrape_single(url: str):
             try:
                 async with self.semaphore:
-                    # Convert the synchronous DocumentConverter.convert call to async
+                    # Convert the synchronous MarkItDown.convert call to async
                     loop = asyncio.get_event_loop()
                     result = await loop.run_in_executor(
                         None, lambda: self.client.convert(url)
                     )
 
                     # Extract content as markdown
-                    content = result.document.export_to_markdown()
+                    content = result.text_content
 
                     result = ExtractResult(success=True, data=content)
                     return url, result
@@ -330,14 +333,14 @@ class DoclingClient(BaseWebClient):
         """
         try:
             async with self.semaphore:
-                # Convert the synchronous DocumentConverter.convert call to async
+                # Convert the synchronous MarkItDown.convert call to async
                 loop = asyncio.get_event_loop()
                 result = await loop.run_in_executor(
                     None, lambda: self.client.convert(str(url))
                 )
 
                 # Extract content as markdown
-                content = result.document.export_to_markdown()
+                content = result.text_content
 
                 return ExtractResult(success=True, data=content)
         except Exception as e:

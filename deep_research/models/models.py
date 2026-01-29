@@ -113,7 +113,6 @@ class ResearchResult(BaseModel):
 class SourceQualityMetrics(BaseModel):
     """Quality metrics for a source."""
 
-    domain_authority: float = Field(default=0.5, ge=0.0, le=1.0)
     recency_score: float = Field(default=0.5, ge=0.0, le=1.0)
     content_depth: float = Field(default=0.5, ge=0.0, le=1.0)
     citation_count: int = Field(default=0, ge=0)
@@ -122,8 +121,7 @@ class SourceQualityMetrics(BaseModel):
     def composite_score(self) -> float:
         """Calculate composite quality score."""
         return (
-            self.domain_authority * 0.3
-            + self.recency_score * 0.2
+            self.recency_score * 0.2
             + self.content_depth * 0.3
             + self.cross_reference_score * 0.2
         )

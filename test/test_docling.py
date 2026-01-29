@@ -1,5 +1,5 @@
 """
-Simple test script for the Docling client.
+Simple test script for the MarkItDown client.
 """
 
 import asyncio
@@ -10,13 +10,13 @@ import sys
 sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 
 # Import after path manipulation
-from deep_research.utils.docling_client import DoclingClient  # noqa: E402
+from deep_research.crawl.markitdown_client import MarkItDownClient  # noqa: E402
 
 
 async def main():
-    """Test the Docling client."""
-    # Create a Docling client
-    client = DoclingClient()
+    """Test the MarkItDown client."""
+    # Create a MarkItDown client
+    client = MarkItDownClient()
 
     # Test search
     print("Testing search...")

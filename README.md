@@ -48,9 +48,8 @@ graph TD
         RP --> RP3[Verification]
         RP --> RP4[Synthesis]
 
-        W --> B1[DoclingClient]
-        W --> B2[DoclingServerClient]
-        W --> B3[FirecrawlClient]
+        W --> B1[MarkItDownClient]
+        W --> B2[FirecrawlClient]
 
         B1 --> E[Brave Search]
         B1 --> F[DuckDuckGo Search]
@@ -58,11 +57,7 @@ graph TD
 
         B2 --> E
         B2 --> F
-        B2 --> G2[Server-based Extraction]
-
-        B3 --> E
-        B3 --> F
-        B3 --> G3[Firecrawl Extraction]
+        B2 --> G2[Firecrawl Extraction]
 
         C --> H[GPT Models]
         C --> I[Claude Models]
@@ -95,8 +90,8 @@ graph TD
     class A primary
     class RP,W,C,D,KG secondary
     class RP1,RP2,RP3,RP4 tertiary
-    class B1,B2,B3 secondary
-    class E,F,G,G2,G3,H,I,J tertiary
+    class B1,B2 secondary
+    class E,F,G,G2,H,I,J tertiary
     class K,L,M quaternary
     class KG1,KG2,KG3,KG4,KG5,KG6 graphrag
     class QS,QS1,QS2,QS3,QS4 quaternary
@@ -154,7 +149,7 @@ graph TD
   - Session persistence for knowledge reuse
 
 - **🧩 Modular Architecture**
-  - Multiple web client options (Docling, Docling-Server, Firecrawl)
+  - Multiple web client options (MarkItDown, Firecrawl)
   - Easily extensible for custom search providers
   - Plug in different LLM backends through LiteLLM
   - Event-driven callback system for monitoring progress
@@ -199,8 +194,8 @@ import asyncio
 import os
 import logging
 from deep_research import DeepResearch
-from deep_research.utils import DoclingClient, DoclingServerClient, FirecrawlClient
-from deep_research.utils.cache import CacheConfig
+from deep_research.crawl import MarkItDownClient, FirecrawlClient
+from deep_research.crawl.cache import CacheConfig
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
@@ -220,12 +215,12 @@ async def main():
     cache_config = CacheConfig(
         enabled=True,                  # Enable caching
         ttl_seconds=3600,              # Cache entries expire after 1 hour
-        db_url="sqlite:///docling_cache.sqlite3"  # SQLite database for cache
+        db_url="sqlite:///markitdown_cache.sqlite3"  # SQLite database for cache
     )
 
-    # OPTION 1: Use the standard Docling client
+    # OPTION 1: Use the standard MarkItDown client
     researcher = DeepResearch(
-        web_client=DoclingClient(
+        web_client=MarkItDownClient(
             cache_config=cache_config,
             brave_api_key=brave_api_key, # Optional: Brave Search API key if None it will use DuckDuckGo with no API key
         ),
@@ -236,23 +231,7 @@ async def main():
         time_limit_minutes=2             # Time limit in minutes
     )
 
-    # OPTION 2: Use the Docling Server client
-    # async with DoclingServerClient(
-    #     server_url="http://localhost:8000",  # URL of your docling-serve instance
-    #     brave_api_key=brave_api_key,
-    #     cache_config=cache_config
-    # ) as docling_server:
-    #     researcher = DeepResearch(
-    #         web_client=docling_server,
-    #         llm_api_key=openai_api_key,
-    #         research_model="gpt-4o-mini",
-    #         reasoning_model="o3-mini",
-    #         max_depth=3,
-    #         time_limit_minutes=2
-    #     )
-    #     # ... rest of your code
-
-    # OPTION 3: Use the Firecrawl client
+    # OPTION 2: Use the Firecrawl client
     # if firecrawl_api_key:
     #     async with FirecrawlClient(
     #         api_key=firecrawl_api_key,
@@ -507,7 +486,7 @@ GraphRAG structures your research findings into a knowledge graph, enabling:
 
 ```python
 from deep_research import DeepResearch
-from deep_research.utils import DoclingClient
+from deep_research.crawl import DoclingClient
 
 # Enable GraphRAG (enabled by default)
 researcher = DeepResearch(
@@ -599,25 +578,17 @@ Key algorithms implemented:
 DeepResearch supports multiple web client implementations:
 
 ```python
-from deep_research.utils import DoclingClient, DoclingServerClient, FirecrawlClient
-from deep_research.utils.cache import CacheConfig
+from deep_research.crawl import MarkItDownClient, FirecrawlClient
+from deep_research.crawl.cache import CacheConfig
 
-# 1. Standard Docling Client (local HTML parsing)
-docling_client = DoclingClient(
+# 1. MarkItDown Client (uses Microsoft's MarkItDown for document conversion)
+markitdown_client = MarkItDownClient(
     brave_api_key="your-brave-key",  # Optional
     max_concurrent_requests=8,
     cache_config=CacheConfig(enabled=True)
 )
 
-# 2. Docling Server Client (connects to remote docling-serve instance)
-docling_server_client = DoclingServerClient(
-    server_url="http://localhost:8000",  # URL of your docling-serve instance
-    brave_api_key="your-brave-key",      # Optional
-    max_concurrent_requests=8,
-    cache_config=CacheConfig(enabled=True)
-)
-
-# 3. Firecrawl Client (connects to Firecrawl API)
+# 2. Firecrawl Client (connects to Firecrawl API)
 firecrawl_client = FirecrawlClient(
     api_key="your-firecrawl-api-key",    # Required
     api_url="https://api.firecrawl.dev", # Default Firecrawl API URL
@@ -634,9 +605,9 @@ firecrawl_client = FirecrawlClient(
 The DeepResearch SDK returns search results with rich metadata, including:
 
 ```python
-from deep_research.utils import DoclingClient
+from deep_research.crawl import MarkItDownClient
 
-client = DoclingClient()
+client = MarkItDownClient()
 
 # Get search results
 search_results = await client.search("artificial intelligence")
@@ -654,19 +625,19 @@ for result in search_results.data:
 ### Using the Cache System
 
 ```python
-from deep_research.utils.cache import CacheConfig
-from deep_research.utils import DoclingClient, DoclingServerClient, FirecrawlClient
+from deep_research.crawl.cache import CacheConfig
+from deep_research.crawl import MarkItDownClient, FirecrawlClient
 
 # Configure the cache with SQLite (default)
 cache_config = CacheConfig(
     enabled=True,                           # Enable caching
     ttl_seconds=3600,                       # Cache for 1 hour
-    db_url="sqlite:///docling_cache.db",    # Use SQLite
+    db_url="sqlite:///research_cache.db",   # Use SQLite
     create_tables=True                      # Create tables if they don't exist
 )
 
 # Initialize client with caching (works with any client type)
-client = DoclingClient(
+client = MarkItDownClient(
     cache_config=cache_config
 )
 
@@ -677,14 +648,14 @@ search_result = await client.search("quantum computing")
 
 # To disable caching completely, either:
 # 1. Don't provide a cache_config:
-client_no_cache = DoclingClient()  # No caching
+client_no_cache = MarkItDownClient()  # No caching
 
 
 # For MySQL/MariaDB backend instead of SQLite
 # First install pymysql: pip install pymysql
 mysql_config = CacheConfig(
     enabled=True,
-    db_url="mysql+pymysql://username:password@localhost/docling_cache"
+    db_url="mysql+pymysql://username:password@localhost/research_cache"
 )
 ```
 
@@ -692,7 +663,7 @@ mysql_config = CacheConfig(
 
 ```python
 from pydantic import BaseModel
-from deep_research.utils.cache import cache
+from deep_research.crawl.cache import cache
 
 # Define which parameters should be used for caching
 class SearchParams(BaseModel):

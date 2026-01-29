@@ -5,7 +5,7 @@ Example demonstrating the use of different web search providers.
 import asyncio
 import os
 
-from deep_research.utils.web import (
+from deep_research.crawl.web import (
     BraveSearchClient,
     DuckDuckGoSearchClient,
     WebSearchProvider,

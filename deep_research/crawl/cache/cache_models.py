@@ -1,5 +1,5 @@
 """
-Cache models for Docling client.
+Cache models for web clients.
 """
 
 import datetime
@@ -15,7 +15,7 @@ class CacheConfig(BaseModel):
 
     enabled: bool = True
     ttl_seconds: int = 86400  # Default TTL: 1 day
-    db_url: str = "sqlite:///docling_cache.sqlite3"  # Default to SQLite
+    db_url: str = "sqlite:///research_cache.sqlite3"  # Default to SQLite
     create_tables: bool = True
 
 

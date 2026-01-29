@@ -6,6 +6,7 @@ from typing import Dict, Optional
 
 import aiohttp
 
+from ...utils import logger
 from ...models import SearchResult, WebSearchItem
 from .base_search import BaseSearchClient
 
@@ -111,7 +112,9 @@ class BraveSearchClient(BaseSearchClient):
                                 formatted_results.append(search_item)
                             except Exception as e:
                                 # Skip invalid results
-                                print(f"Error processing search result: {str(e)}")
+                                logger.error(
+                                    f"Error processing search result: {str(e)}"
+                                )
                                 continue
 
                     # If no results found, create some mock results
@@ -129,7 +132,7 @@ class BraveSearchClient(BaseSearchClient):
                                 )
                             )
                         except Exception as e:
-                            print(f"Error creating mock result: {str(e)}")
+                            logger.error(f"Error creating mock result: {str(e)}")
 
                     # Add related searches if available
                     if "related" in data and "results" in data["related"]:

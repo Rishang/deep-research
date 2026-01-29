@@ -10,9 +10,9 @@ import sys
 sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 
 # Import after path manipulation
-from deep_research.utils.brave_search import BraveSearchClient  # noqa: E402
-from deep_research.utils.docling_client import DoclingClient  # noqa: E402
-from deep_research.utils.duckduckgo_search import DuckDuckGoSearchClient  # noqa: E402
+from deep_research.crawl.brave_search import BraveSearchClient  # noqa: E402
+from deep_research.crawl.markitdown_client import MarkItDownClient  # noqa: E402
+from deep_research.crawl.duckduckgo_search import DuckDuckGoSearchClient  # noqa: E402
 
 
 async def test_search_providers():
@@ -55,21 +55,21 @@ async def test_search_providers():
         print(f"Error: {ddg_results.error}")
     print()
 
-    # Test DoclingClient with fallback mechanism
-    print("Testing DoclingClient with fallback mechanism...")
-    docling_client = DoclingClient(api_key="demo", brave_api_key=brave_api_key)
-    docling_results = await docling_client.search(query, max_results)
+    # Test MarkItDownClient with fallback mechanism
+    print("Testing MarkItDownClient with fallback mechanism...")
+    markitdown_client = MarkItDownClient(brave_api_key=brave_api_key)
+    markitdown_results = await markitdown_client.search(query, max_results)
 
-    print(f"Success: {docling_results.success}")
-    if docling_results.success and docling_results.data:
+    print(f"Success: {markitdown_results.success}")
+    if markitdown_results.success and markitdown_results.data:
         print(
-            f"Found {len(docling_results.data)} results using provider: {docling_results.data[0].provider}"
+            f"Found {len(markitdown_results.data)} results using provider: {markitdown_results.data[0].provider}"
         )
-        for i, result in enumerate(docling_results.data, 1):
+        for i, result in enumerate(markitdown_results.data, 1):
             print(f"Result {i}: {result.title} - {result.url}")
             print(f"  Provider: {result.provider}, Date: {result.date}")
     else:
-        print(f"Error: {docling_results.error}")
+        print(f"Error: {markitdown_results.error}")
 
 
 if __name__ == "__main__":

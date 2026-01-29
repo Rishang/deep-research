@@ -1,5 +1,5 @@
 """
-Pydantic models for Docling client cache parameters.
+Pydantic models for web client cache parameters.
 """
 
 from typing import Optional

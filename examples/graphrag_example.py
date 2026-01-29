@@ -14,8 +14,8 @@ from pathlib import Path
 
 from deep_research import DeepResearch
 from deep_research.graphrag import GraphQuery, KnowledgeGraphManager
-from deep_research.utils import DoclingClient
-from deep_research.utils.cache import CacheConfig
+from deep_research.crawl import MarkItDownClient
+from deep_research.crawl.cache import CacheConfig
 
 
 async def main():
@@ -38,7 +38,7 @@ async def main():
 
     # Initialize DeepResearch with GraphRAG enabled
     researcher = DeepResearch(
-        web_client=DoclingClient(
+        web_client=MarkItDownClient(
             brave_api_key=brave_api_key,
             max_concurrent_requests=8,
             cache_config=CacheConfig(enabled=True),
@@ -96,7 +96,7 @@ async def main():
 
         # Create a new researcher instance and load the saved graph
         graph_researcher = DeepResearch(
-            web_client=DoclingClient(brave_api_key=brave_api_key),
+            web_client=MarkItDownClient(brave_api_key=brave_api_key),
             llm_api_key=openai_api_key,
             research_model="gpt-4o-mini",
             enable_graphrag=True,

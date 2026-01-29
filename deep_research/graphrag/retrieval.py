@@ -7,6 +7,7 @@ from typing import List, Optional
 
 import litellm
 
+from ..utils import logger
 from .knowledge_graph import KnowledgeGraph
 from .models import (
     Entity,
@@ -180,6 +181,7 @@ Consider:
                 temperature=0,
                 drop_params=True,
                 base_url=self.base_url,
+                stream=False,  # Explicitly disable streaming for OpenRouter compatibility
             )
 
             result_text = response.choices[0].message.content
@@ -193,7 +195,7 @@ Consider:
             return parsed.get("relevant_entity_ids", [])
 
         except Exception as e:
-            print(f"Entity identification error: {str(e)}")
+            logger.error(f"Entity identification error: {str(e)}")
             # Fallback: return top PageRank entities
             top_entities = self.graph.get_most_important_entities(query.max_results)
             return [e.id for e in top_entities]
