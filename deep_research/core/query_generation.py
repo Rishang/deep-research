@@ -109,6 +109,8 @@ Respond with a JSON array:
                 temperature=model_temp,
                 drop_params=True,
                 base_url=self.base_url,
+                stream=False,
+                stream_options=None,  # Prevent usage tracking parameters for OpenRouter compatibility
             )
 
             result_text = response.choices[0].message.content
@@ -193,6 +195,8 @@ Respond with a JSON array:
                 temperature=model_temp,
                 drop_params=True,
                 base_url=self.base_url,
+                stream=False,
+                stream_options=None,  # Prevent usage tracking parameters for OpenRouter compatibility
             )
 
             result_text = response.choices[0].message.content
@@ -279,6 +283,8 @@ Respond with a JSON array:
                 temperature=model_temp,
                 drop_params=True,
                 base_url=self.base_url,
+                stream=False,
+                stream_options=None,  # Prevent usage tracking parameters for OpenRouter compatibility
             )
 
             result_text = response.choices[0].message.content
@@ -333,6 +339,8 @@ Respond with a JSON array of strings:
                 temperature=model_temp,
                 drop_params=True,
                 base_url=self.base_url,
+                stream=False,
+                stream_options=None,  # Prevent usage tracking parameters for OpenRouter compatibility
             )
 
             result_text = response.choices[0].message.content

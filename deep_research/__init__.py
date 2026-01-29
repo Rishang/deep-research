@@ -124,6 +124,16 @@ class DeepResearch:
             # Configure models to use OpenAI
             litellm.set_verbose = False  # Disable verbose output
 
+        # Configure litellm for OpenRouter compatibility
+        litellm.drop_params = True  # Drop unsupported parameters globally
+        litellm.modify_params = True  # Allow parameter modification
+        litellm.enable_json_schema_validation = False  # Disable JSON schema validation
+
+        # Disable stream_options globally for OpenRouter
+        import os
+
+        os.environ["LITELLM_DROP_PARAMS"] = "True"
+
         # Initialize query generator
         self.query_generator = QueryGenerator(
             reasoning_model=reasoning_model,
@@ -420,7 +430,8 @@ class DeepResearch:
                 temperature=model_temp,
                 drop_params=True,
                 base_url=self.base_url,
-                stream=False,  # Explicitly disable streaming for OpenRouter compatibility
+                stream=False,
+                stream_options=None,  # Prevent usage tracking parameters for OpenRouter compatibility
             )
 
             result_text = response.choices[0].message.content
@@ -1166,6 +1177,8 @@ class DeepResearch:
                 temperature=model_temp,
                 drop_params=True,  # Drop unsupported params for certain models
                 base_url=self.base_url,
+                stream=False,
+                stream_options=None,  # Prevent usage tracking parameters for OpenRouter compatibility
             )
 
             final_text = final_analysis.choices[0].message.content

@@ -181,7 +181,8 @@ Consider:
                 temperature=0,
                 drop_params=True,
                 base_url=self.base_url,
-                stream=False,  # Explicitly disable streaming for OpenRouter compatibility
+                stream=False,
+                stream_options=None,  # Prevent usage tracking parameters for OpenRouter compatibility
             )
 
             result_text = response.choices[0].message.content

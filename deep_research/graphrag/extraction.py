@@ -99,7 +99,6 @@ Important:
                 temperature=0,
                 drop_params=True,
                 base_url=self.base_url,
-                stream=False,  # Explicitly disable streaming for OpenRouter compatibility
             )
 
             result_text = response.choices[0].message.content
@@ -221,7 +220,6 @@ Provide an enriched description and extract any additional properties.
                 temperature=0,
                 drop_params=True,
                 base_url=self.base_url,
-                stream=False,  # Explicitly disable streaming for OpenRouter compatibility
             )
 
             result_text = response.choices[0].message.content

@@ -12,6 +12,23 @@ import yaml
 from ...utils import logger
 
 
+# Custom YAML representer for multi-line strings using |- format
+def str_representer(dumper, data):
+    """
+    Custom YAML representer that uses literal block scalar (|-) for multi-line strings.
+    This makes the YAML output more readable.
+    """
+    if (
+        "\n" in data or len(data) > 80
+    ):  # Use literal style for multi-line or long strings
+        return dumper.represent_scalar("tag:yaml.org,2002:str", data, style="|-")
+    return dumper.represent_scalar("tag:yaml.org,2002:str", data)
+
+
+# Register the custom representer
+yaml.add_representer(str, str_representer)
+
+
 class DumpManager:
     """
     Manages saving and loading research dumps to/from disk.
@@ -75,6 +92,7 @@ class DumpManager:
                         default_flow_style=False,
                         allow_unicode=True,
                         sort_keys=False,
+                        width=1000,  # Prevent line wrapping for better readability
                     )
                 else:
                     json.dump(dump_data, f, indent=2, ensure_ascii=False)
